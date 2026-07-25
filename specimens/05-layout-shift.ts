@@ -46,11 +46,27 @@ function isFixed(): boolean {
   return currentMode === 'fixed';
 }
 
+/**
+ * ⚠️ 這個計數器數的是**排程數，不是實際產生的 layout shift entry 數**，
+ * 兩者在本標本並不相等。
+ *
+ * 位移源二（字族換入）在結構上不產生任何 entry：`fireFontShift` 只改 `#ls-prose`
+ * 自己的 `fontFamily` / `fontSize`，而 `#ls-prose` 是模板的最後一個元素，
+ * 下方沒有內容可被推動 —— 元素自己往下長高、左上角不動，不符合記錄條件。
+ *
+ * 於是實際只有 300ms 與 1500ms 兩筆 entry，間隔 1200ms > session window 的 1000ms，
+ * 開兩個窗。**這才是三輪實測 `sessionCount = 2`（登記為 1）的真正原因**，
+ * 也讓治療版的 `min-height` 變成在預留一個不存在的位移的空間。
+ *
+ * 面板顯示 `3/3` 而兩個 mode 都顯示 3/3，這個缺陷在 UI 上完全隱形 ——
+ * 所以欄位改名成 `shiftSourcesScheduled`，讓名字說出它真正在數什麼。
+ * 要修好標本本身（讓位移源二真的位移），得把字族換入改到下方有內容的元素上。
+ */
 function note(text: string): void {
   firedSources += 1;
-  if (statusEl) statusEl.textContent = `${firedSources}/3 · ${text}`;
+  if (statusEl) statusEl.textContent = `${firedSources}/3 排程 · ${text}`;
   ctxRef?.emit({
-    shiftSourcesFired: firedSources,
+    shiftSourcesScheduled: firedSources,
     imageAtMs: IMAGE_AT_MS,
     fontAtMs: FONT_AT_MS,
     bannerAtMs: BANNER_AT_MS,

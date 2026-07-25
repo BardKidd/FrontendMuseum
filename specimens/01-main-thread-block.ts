@@ -203,8 +203,18 @@ function runSynchronousSort(): void {
  * Array.prototype.sort 是不可中斷的原子操作，不換寫法就沒有 chunk 邊界可言。
  * 這裡的作法是把資料切成 4096 筆一段、每段仍用**原生 sort**（比較器的工作量因此
  * 與病變版同一種），再逐層合併，並在段與段、合併的迴圈裡按 wall clock 讓出。
- * 代價是總 CPU 工作量比單次原生 sort **更多**，而它仍然贏 —— 混淆變因往
- * 對自己不利的方向偏，結論反而更硬。兩邊的 sortMs 都有上報，讀者自己看得到。
+ * 代價是總 CPU 工作量比單次原生 sort **更多**。
+ *
+ * ⚠️ 先前這裡寫「混淆變因往對自己不利的方向偏，結論反而更硬」—— **方向記反了。**
+ * 三輪實測 `completedSorts` / `cancelledSorts`：病變版 **10 / 0**，
+ * 而 `fixed-yield` 與 `fixed-worker` 都是 **1 / 9**。在十次點擊的 protocol 層級，
+ * 治療臂只做完十分之一的排序。取消被後續操作蓋掉的工作是非同步實作的正確行為
+ *（也正是讓出主執行緒買到的東西之一，同步實作沒有這個選項），
+ * 但這意味著 17× 不是同一份工作量的對照。
+ *
+ * 誠實的寫法是兩句話：「讓出主執行緒把 INP 從 1368ms 降到 80ms，
+ * 其中一部分來自它現在能丟掉過期的工作。」兩邊的 sortMs 與
+ * completedSorts / cancelledSorts 都有上報，讀者自己看得到。
  */
 async function runChunkedSort(): Promise<void> {
   // 重疊處理策略：**取消**前一輪，不排隊。

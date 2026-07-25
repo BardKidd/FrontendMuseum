@@ -92,8 +92,14 @@ function buildItems(): Item[] {
 }
 
 /**
- * 一列 = 7 個節點（li + 方塊 + 三行文字 + 兩個 badge）。
- * 5000 列就是 35,000 個節點 —— 這個數字本身就是病變，`domNodeCount` 會把它報出來。
+ * 一列 = **8** 個元素：li + 方塊 + 三行文字 + badges 包裝層 + 兩個 badge。
+ * 5000 列就是 40,000 個節點 —— 這個數字本身就是病變，`domNodeCount` 會把它報出來。
+ *
+ * ⚠️ 先前這裡寫 7 / 35,000，漏算了下面那個 badges 包裝 div，而錯的數字同時出現在
+ * 頁面文案與 `src/specimens.ts` 的 subtitle。實測 `domNodeCount` = 40,021，
+ * 反解兩式 `21 + 5000×8 = 40021` 與虛擬滾動臂的 `21 + 15×8 = 141` 獨立同解出
+ * 「每列 8 個、基底 21」。修正紀錄先前還把 40,021 判成「符合登記 ~35,000」，
+ * 等於把一個計數 bug 當成量測容差放過。
  */
 function buildRow(item: Item, index: number): HTMLElement {
   const li = document.createElement('li');
@@ -252,7 +258,7 @@ function mount(root: HTMLElement, ctx: SpecimenContext): void {
     </style>
 
     <h1>標本 #2 —— 長列表未虛擬化</h1>
-    <p>${ITEM_COUNT} 筆裝置狀態。病變版一次全部渲染成 DOM（約 ${ITEM_COUNT * 7} 個節點）。</p>
+    <p>${ITEM_COUNT} 筆裝置狀態。病變版一次全部渲染成 DOM（約 ${ITEM_COUNT * 8} 個節點）。</p>
     <p><strong>載入後請先不要動</strong>，等面板出現 LCP 之後再開始捲動 ——
        LCP 在第一次互動（點擊、按鍵、<strong>捲動也算</strong>）之後就定案，
        提早捲動會讓這個標本的主指標量不到。</p>

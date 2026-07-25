@@ -172,7 +172,7 @@ export const LONG_LIST_META: SpecimenMeta = {
   id: '02-long-list',
   order: 2,
   title: '長列表未虛擬化',
-  subtitle: '一次渲染 5000 筆裝置狀態，約 35,000 個 DOM 節點 —— LCP 被拖垮，捲動掉幀',
+  subtitle: '一次渲染 5000 筆裝置狀態，約 40,000 個 DOM 節點 —— LCP 被拖垮，捲動掉幀',
 
   class: 'B',
   switchKind: 'reload',
@@ -222,7 +222,7 @@ export const UNTHROTTLED_EVENTS_META: SpecimenMeta = {
   id: '04-unthrottled-events',
   order: 4,
   title: '事件處理未節流',
-  subtitle: 'scroll handler 每次事件都掃過 2000 列；wheel 又是 passive:false，瀏覽器不敢先捲',
+  subtitle: 'scroll handler 每次事件都掃過 8000 列；wheel 又是 passive:false，瀏覽器不敢先捲',
 
   class: 'A',
   switchKind: 'live',

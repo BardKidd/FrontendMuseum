@@ -1,7 +1,7 @@
 /**
  * 標本 #4 —— 事件處理未節流。
  *
- * 病變：`scroll` handler 每次事件都對 2000 列各讀一次 `getBoundingClientRect()`，
+ * 病變：`scroll` handler 每次事件都對 8000 列各讀一次 `getBoundingClientRect()`，
  * 而 `wheel` listener 又是 `{ passive: false }` —— 瀏覽器必須等 handler 跑完
  * 才敢開始捲動。於是捲動期間每一幀都在做 O(N) 的工作，畫面掉幀。
  *
@@ -185,7 +185,7 @@ function scanOnAnimationFrame(): void {
 function onIntersect(entries: IntersectionObserverEntry[]): void {
   const t0 = performance.now();
   let visible = 0;
-  // entries 只含「狀態有變」的那幾列，不是全部 2000 列
+  // entries 只含「狀態有變」的那幾列，不是全部 8000 列
   for (const e of entries) {
     if (e.isIntersecting) visible += 1;
   }
@@ -344,7 +344,7 @@ function mount(root: HTMLElement, ctx: SpecimenContext): void {
 
 /**
  * A 類 live 切換：只換 listener 組合，不重建列。
- * 重建 2000 列會把捲動位置一起清掉，那等於在「怎麼監聽」之外又動了「從哪裡開始捲」。
+ * 重建 8000 列會把捲動位置一起清掉，那等於在「怎麼監聽」之外又動了「從哪裡開始捲」。
  */
 function setMode(mode: string): void {
   currentMode = mode;

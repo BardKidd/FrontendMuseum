@@ -63,8 +63,22 @@ export class FrameCounter {
 
   reset(): void {
     this.#misses = [];
-    // #last 不歸零：重跑不代表時間軸斷掉，歸零會讓下一幀算出一個巨大的 delta，
-    // 那一筆假掉幀會直接進新一輪的第一個窗。
+    /*
+     * #last 要**重新對時**到現在，而不是歸零、也不是不動。
+     *
+     * 歸零會讓下一幀算出一個巨大的 delta，那一筆假掉幀直接進新一輪的第一個窗 ——
+     * 這是原本註解唯一駁斥的錯誤選項。但「不動」同樣是錯的，只是症狀藏得更深：
+     * runtime 的順序是先 `await mod.setMode()`（同步阻塞主執行緒）再 `reset()`，
+     * 切換期間沒有任何 rAF tick 跑得成，所以 reset 當下沒東西可清；
+     * 等切換結束、下一個 tick 觸發時，它算的 delta **跨越整段切換工作**，
+     * 那筆 miss 就被推進剛清空的陣列，記在新 mode 頭上。
+     *
+     * 受害最深的是標本 #4 的 `fixed-observer`：進入該 mode 要跑 8000 次
+     * `observer.observe()`，是四個 mode 裡最重的切換成本，卻整份記在治療版帳上。
+     * 偏差方向對治療版不利（結論不會反轉），但主指標的絕對值會失真。
+     * warmup 窗擋不住它 —— `droppedPeak` 在 flush() 裡是無條件更新的。
+     */
+    this.#last = performance.now();
   }
 
   /** 最近 windowMs 內的掉幀數 */
