@@ -405,3 +405,159 @@ LCP 取值跟 web-vitals 完全一致。C 的 −2.3% 等價於聯集高度被�
 這正是本站最怕的那種錯：結論反過來，而且沒有任何徵兆。已在 `runtime.ts` 的
 `handleSetMode()` 補上 `frames.reset()` 與 `droppedPeak = 0`；
 修完之後標本 #4 的治療版從「繼承 44」變成正確的 5。
+
+---
+
+## 修正紀錄 · 三輪可重現量測（2026-07-26）
+
+原始資料：`docs/measurements/2026-07-25-reproducibility-4x.json`
+（正式 60 筆 + 被取代 9 筆）。工具：`tools/reproducibility.mjs`、`tools/analyze-repro.mjs`。
+宣告 4x CPU throttle、CDP 機器驅動、每個 mode 三輪。
+
+### 更正：先前把一條**被推翻**的風險記成「證實」
+
+上面「順帶證實了登記在案的第 3 條風險」那一段**寫反了**，原文保留不刪。
+
+登記的風險 #3 預測 `setInterval(50ms)` 卡頓後會累積補償性回呼，
+「會讓收到的批次數**超出** 20/秒」。實測是相反方向：`broken` 五秒只收到
+**48 / 47 / 50** 批（名目 100），治療版收到 100。
+
+`setInterval` 錯過的週期是**被丟棄，不是排隊補發**——同一個 id 任何時刻最多只有一個
+pending callback。所以主執行緒一忙，推送率就反向塌陷到跟渲染率一樣慢。
+`specimens/06-rerender-storm.ts` 的對應註解同樣預測錯方向，也保留待改。
+
+**方向性預測失敗比預測成功更值錢，但前提是要記對。**
+
+### 六個病變版全部可重現，判準改用 median + 絕對底線
+
+| 標本 | 病變版三輪主指標 | 離散度 | 判定 |
+|---|---|---|---|
+| #1 | INP median 1368 / 1376 / 1264 ms | 8.2% | ✅ |
+| #2 | LCP 1396 / 1356 / 1360 ms | 2.9% | ✅ |
+| #3 | forced median 745 / 716 / 678 ms | 9.2% | ✅ |
+| #4 | 掉幀峰值 38 / 46 / 43 | 18.6% | ✅ |
+| #5 | CLS 0.1266 / 0.1119 / 0.1266 | 11.6% | ✅ |
+| #6 | 掉幀峰值 225 / 237 / 231 | 5.2% | ✅ |
+
+判準兩處修正，**兩處都是儀器缺陷不是標本缺陷**：
+
+1. **離散度必須算在每輪的 median，不是 max。** 第一版拿 forced 峰值跨輪比，
+   標本 #3 算出 871 / 792 / 1245ms、離散度 **52%**、判定不可重現；
+   換成每輪 median 是 721 / 709 / 751ms、**5.9%**。
+   `protocol.ts:290` 本來就寫著「抗離群。可重現性判定用這個，不用 max」。
+2. **相對離散度需要一條絕對雜訊底線。** 治療版掉幀 4 / 1 / 1 算出 300%，
+   但絕對差只有 3 幀。治療有效正是讓分母趨零，
+   於是「治療越成功，越判它不可重現」。已加 `floor`
+   （掉幀 5 / INP 16ms / CLS 0.01 / LCP 50ms）。
+
+底線不是猜的：標本 #6 的 `fixed-granular` 與 `fixed-backpressure`
+實測跑的是位元級同一條路徑（見下），六輪 `droppedFramesPeak` 全距 = 5 幀。
+
+### 標本 #1：`intervalMs: null` 不是凍結的變因（登記風險成真）
+
+三種驅動方式，三個不同的結論：
+
+| 驅動方式 | INP median | 兇手 |
+|---|---|---|
+| CDP 每次點擊等回應 | 124 / 112 / 120 ms | processing |
+| CDP 一次灌完不等回應 | 1368 / 1376 / 1264 ms | **presentation**（約 1230ms） |
+| CDP 固定 150ms 間隔（探針） | 128 / 120 / 112 ms | processing |
+
+等回應時事件排不了隊（回覆要等被擋住的主執行緒送出），不等回應時十次點擊
+**同時**發生、十個 handler 連續跑完才輪到一次 paint。人手連打是 ~150ms 一下。
+**兩種機器驅動法都錯，錯在相反方向。**
+
+登記的兇手 `inputDelay` 三輪皆未觀測到（0.5~2.8ms）。要讓它成為兇手，
+單次工作量必須遠大於點擊間隔；`ORDER_COUNT = 50_000` 在 4x 下單次排序約 120ms，
+與可達的點擊間隔同量級。**這是設計參數問題，尚未裁決。**
+
+### 標本 #1：兩段治療都只做了十分之一的工作
+
+`completedSorts` / `cancelledSorts`：病變版 **10 / 0**，兩段治療皆 **1 / 9**。
+非同步實作取消被蓋掉的工作是正確行為，但 17× 不是同一份工作量的對照。
+`01-main-thread-block.ts:206-207` 宣稱這個混淆變因往對治療不利的方向偏，**方向記反了**。
+
+Web Worker 一臂：`workerSortMs` 28.4ms、`workerTransferMs` **589.7ms**。
+搬運比排序貴 20 倍，576ms 的 INP 幾乎全是 structured clone 的費用。
+
+### 標本 #6：治療三的背壓守衛從未執行
+
+`renderNotBefore = now + Math.max(0, lastRenderMs - RENDER_BUDGET_MS)`
+（`06-rerender-storm.ts:179`，`RENDER_BUDGET_MS = 16.7`）。
+治療三走細粒度路徑，`lastRenderMs` 實測 1.7~2.7ms，`Math.max` 恆為 0，
+`renderNotBefore` 恆等於 `now`，跳過分支不可達（需要 `lastRenderMs > 33.4ms`）。
+
+實測交叉證實：三輪 `rendersSkipped` 全為 0，且 `fixed-granular` 與
+`fixed-backpressure` 六輪的 `batchesReceived` 100、`batchesRendered` 99、
+`updatesApplied` **17943** 逐欄完全相同。登記的「backpressure `renderRatio` < 0.5」
+在現行設計下**永遠不可能達成**（實測皆 1.0）。
+
+次要：`RENDER_BUDGET_MS` 寫死 16.7，與 `frames.ts` 依實測 `refreshHz` 推導門檻不同源。
+
+### 標本 #6：治療一未進入作用區間（不是無效）
+
+`fixed-batch` 掉幀 219 / 222 / 223 vs 病變 225 / 237 / 231，比值 1.04×，
+離散度 1.8%（高度可重現的零效果）。登記 4x 預期 20~120，實測超出上限 1.85 倍。
+
+原因是 `PUSH_INTERVAL_MS = 50`（20 推送/秒），60Hz 一幀平均只有 0.33 筆推送，
+沒有東西可以合併（實測 `renderRatio` 0.91 / 1.0 / 1.0）。
+要讓「批次化」成為乾淨的單一變因，推送間隔必須明顯短於幀時間。**尚未裁決。**
+
+另：`renderAll` 的自報耗時只包住節點建構與 `replaceChildren`，
+不含 style / layout / paint。`broken` 自報 12.7~14.4ms，而實際幀距約 104ms
+（5000ms ÷ 48 批）。當初用來把 200 台校準到 1000 台的「每次重建 14.9ms」
+**系統性低估真實幀成本約 7 倍**——校準結論不變（負載仍需放大），但理由要改寫。
+
+### 標本 #4：治療一同時翻了兩個變因，治療二未進入作用區間
+
+`fixed-passive` 登記為「**只**把 wheel 改成 `passive: true`」，
+但 `04-unthrottled-events.ts:245` 同時把 handler 從 `scanOnEveryWheel`
+換成 `countWheelOnly`，順手拿掉一整輪 8000 次 `getBoundingClientRect()`。
+實測 `passes` 21 → 11、`rectReads` 168,000 → 88,000。
+掉幀降幅 0.63× **小於**工作量降幅 0.52×，`passive` 旗標沒有留下可歸因的殘差。
+
+`fixed-raf` 與 `fixed-passive` 的 `passes` 與 `rectReads` **逐輪完全相同** ——
+驅動器每 500ms 才派一次滾輪，一幀內永遠沒有第二個事件可合併，rAF 閘門一次都沒觸發。
+
+只有 `fixed-observer` 乾淨（`scrollEvents` = 0、`rectReads` = 0，43 → 1），
+但它是換機制，不是「治療一再加一點」。這個標本的梯度敘事需要重寫。
+
+### 標本 #5：位移源二不產生位移，這才是 `sessionCount = 2` 的原因
+
+`fireFontShift` 只改 `#ls-prose` 自己的 `fontFamily` / `fontSize`
+（`05-layout-shift.ts:93-94`），而 `#ls-prose` 是模板的**最後一個元素**，
+下方沒有內容可被推動——元素自己往下長高、左上角不動，不符合 layout shift 記錄條件。
+
+於是實際只有兩筆 entry：300ms 與 1500ms，間隔 **1200ms > 1000ms**，開兩個 session window。
+**先前登記的 `sessionCount: 1` 是錯的，實測的 2 完全正確，
+而正確的原因是這個標本比它自己以為的少了三分之一。**
+
+連帶：治療版的 `min-height: 168px` 治的是不存在的位移；
+`shiftSourcesFired` 數的是排程數不是 entry 數，兩個 mode 都顯示 3/3，缺陷在 UI 上隱形；
+標本頁面上印給讀者的「三次位移會落進同一個 session 並累加」是錯的。
+
+### 標本 #2：每列是 8 個節點不是 7
+
+`domNodeCount` 實測 40,021。反解兩式：`21 + 5000×8 = 40021`、
+`21 + 15×8 = 141`（虛擬滾動臂），兩式獨立同時解出每列 8 個節點、基底 21。
+`buildRow` 漏算了 badges 包裝層。程式註解、頁面文案（`約 35000 個節點`）
+與 `src/specimens.ts` 的 subtitle 三處都還印著 35,000。
+先前把實測 40,021 判為「符合登記 ~35,000，不必調整」，等於把計數 bug 當成量測容差放過。
+
+### 量測工具自身的缺陷（已知，未修）
+
+1. `tools/reproducibility.mjs` 的 `loafForced()` 用嚴格 `>` 選幀，
+   該指標全為 0 時 `best` 固定停在 `frames[0]`（面板最近六幀裡**最舊**的一幀）。
+   對 #1 / #4 / #6 這類沒有強制版面的標本，`specimenScript` 與 `forcedFn` 欄位不可信。
+2. `tools/analyze-repro.mjs` 的 `clsValue` 把「沒量到」與「真的是 0」併成同一個值，
+   方向永遠偏向「治療完美」。同檔的 `SAMPLED_FORCED` 正是為了擋這種錯，CLS 沒有等價防線。
+3. 寫檔路徑的 `Infinity` 經 `JSON.stringify` 變成 `null`，只讀 JSON 的人會把
+   「治療版該指標為零」誤讀成「比值算不出來」。console 分支有處理，寫檔沒有。
+4. B 類的 `for r { for m of modes }` 讓 mode 與循環位置完全共線，
+   註解卻宣稱「順帶把單調漂移也擋掉」。三輪不是打散共線，是複製三次。
+5. `src/measure/frames.ts` 的 `reset()` 不重設 `#last`，切 mode 期間主執行緒被塞住、
+   沒有 rAF tick，等切換結束後第一個 tick 算出的 `delta` 跨越整段切換工作，
+   那筆 miss 記在新 mode 帳上。受害最深的是 `fixed-observer`
+   （進入該 mode 要跑 8000 次 `observer.observe()`）。
+   偏差方向對治療版不利，所以 43 → 1 是保守下界，結論不翻轉。
+   修法是 `#last = performance.now()`。
