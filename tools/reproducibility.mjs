@@ -264,17 +264,35 @@ const SPECS = [
 /** 一幀 LoAF 裡標本自己造成的強制版面重排；同時撈出兇手函式名 */
 function loafForced(s) {
   const frames = [...(s?.loafRecent || []), s?.loafWorst].filter(Boolean);
-  let best = null;
-  for (const f of frames) {
-    if (best === null || f.specimenForcedStyleAndLayoutDuration > best.specimenForcedStyleAndLayoutDuration) best = f;
-  }
-  if (!best) return { forced: null, fn: null, specimenScript: null };
+  if (!frames.length) return { forced: null, fn: null, specimenScript: null, pickedBy: 'none' };
+
+  /*
+   * 兩段式挑選 + 記錄「是靠哪個準則挑的」。
+   *
+   * 先前只有一段：`if (best === null || f.forced > best.forced) best = f`。
+   * 嚴格大於在**該指標全為 0 時永遠不成立**，於是 best 固定停在 frames[0] ——
+   * 也就是面板 `slice(-6)` 裡**最舊**的那一幀，不是最壞的那一幀。
+   * 對標本 #1／#4／#6 這些本來就沒有強制版面的標本，連帶輸出的
+   * `specimenScript` 與 `forcedFn` 全部退化成隨機取樣：同一個 mode 同一組條件
+   * 之間差了 18 倍，那不是抖動，是選到不同幀。
+   *
+   * 修法是全為 0 時退回「specimenScriptDuration 最大」，並把準則記進 record，
+   * 讓下游知道該欄位可不可信。
+   */
+  const maxForced = frames.reduce((a, b) =>
+    b.specimenForcedStyleAndLayoutDuration > a.specimenForcedStyleAndLayoutDuration ? b : a);
+  const hasForced = maxForced.specimenForcedStyleAndLayoutDuration > 0;
+  const best = hasForced
+    ? maxForced
+    : frames.reduce((a, b) => (b.specimenScriptDuration > a.specimenScriptDuration ? b : a));
+
   const script = (best.topScripts || []).find((x) => x.forcedStyleAndLayoutDuration > 0)
     || (best.topScripts || [])[0];
   return {
     forced: best.specimenForcedStyleAndLayoutDuration,
     fn: script ? script.sourceFunctionName : null,
     specimenScript: best.specimenScriptDuration,
+    pickedBy: hasForced ? 'forcedStyleAndLayout' : 'specimenScriptDuration',
   };
 }
 
@@ -298,6 +316,9 @@ function capture(s, forcedSamples) {
     forcedMedian: median(fs),
     forcedPeak: fs.length ? Math.max(...fs) : (lf.forced ?? null),
     forcedFn: lf.fn,
+    /** 'forcedStyleAndLayout' | 'specimenScriptDuration' | 'none'。
+     *  不是前者時，forcedFn 與 specimenScript 只是「本輪最重的一幀」，不代表兇手 */
+    loafPickedBy: lf.pickedBy,
     specimenScript: lf.specimenScript,
     lcp: m?.lcp ? { value: m.lcp.value, el: m.lcp.elementDescriptor } : null,
     cls: m?.cls ? { value: m.cls.value, sessionCount: m.cls.sessionCount } : null,
@@ -472,7 +493,24 @@ async function measureSpecimen(spec) {
     // 正是 B 類要的東西。之後 mode 交替，不會再撞到自己
     let current = spec.modes[0].id;
     for (let r = 1; r <= RUNS; r++) {
-      for (const m of spec.modes) {
+      /*
+       * 每一輪把 mode 順序輪轉一格。
+       *
+       * 先前是固定的 `for r { for m of spec.modes }`，於是每個 mode 每輪都佔同一順位，
+       * **mode 與「在這一輪的第幾個位置」完全共線** —— 三輪不是打散共線，是複製三次。
+       * 任何隨位置單調變化的東西（熱節流、快取暖起來、記憶體壓力）都會整份記在
+       * 某個 mode 頭上，而離散度看起來反而漂亮，因為三輪都偏同樣的量。
+       * 註解先前還宣稱「順帶把單調漂移也擋掉」，那是錯的。
+       */
+      const n = spec.modes.length;
+      const rot = (k) => spec.modes.map((_, i) => spec.modes[(i + k) % n]);
+      let order = rot(r - 1);
+      // 輪轉後的第一個若正好等於上一輪的最後一個，再轉一格 —— 同一個 mode 連按兩次
+      // 不會重載（switchMode 對 next === current 直接 return，按鈕本身也 disabled），
+      // 那一輪就不是新的 document。n = 2 時這個守衛會把輪轉抵銷掉，
+      // 兩個 mode 只能交替，位置共線在數學上無法避免，照實記著
+      if (order[0].id === current) order = rot(r % n);
+      for (const m of order) {
         const alreadyFresh = r === 1 && m.id === current && spec.modes[0].id === m.id;
         if (!alreadyFresh) {
           await clickShell(m.label, `切 mode ${m.id}（重載）`);

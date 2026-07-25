@@ -63,7 +63,24 @@ function pick(rec, key) {
   switch (key) {
     case 'statsMedian': return rec.stats ? rec.stats.median : null;
     case 'lcpValue': return rec.lcp ? rec.lcp.value : null;
-    case 'clsValue': return rec.cls ? rec.cls.value : 0; // cls 欄位不存在 = 一次位移都沒有
+    /*
+     * `rec.cls` 為 null 有三種來源，先前一律當成 0：
+     *   (a) 真的零位移（vitals.ts 的 ClsCollector 沒有任何 entry）
+     *   (b) 瀏覽器不支援 layout-shift entryType，observer 靜默沒啟動
+     *   (c) metrics 訊息根本沒到（逾時 / 掛載失敗）
+     * 三者併成 0，**方向永遠偏向「治療完美」**。同檔的 SAMPLED_FORCED 正是為了擋
+     * 這種錯而存在，CLS 先前沒有等價防線。
+     *
+     * 判別依據：標本有跑起來就一定 emit 過 shiftSourcesScheduled（或舊名
+     * shiftSourcesFired）。有那個欄位就代表觀測管線活著、CLS 真的是 0；
+     * 沒有就是沒量到，回 null 讓上游判成 insufficient-runs。
+     */
+    case 'clsValue': {
+      if (rec.cls) return rec.cls.value;
+      const ran = rec.custom
+        && (rec.custom.shiftSourcesScheduled !== undefined || rec.custom.shiftSourcesFired !== undefined);
+      return ran ? 0 : null;
+    }
     case 'droppedFramesPeak': return rec.custom?.droppedFramesPeak ?? null;
     case 'forcedMedian':
       if (rec.forcedMedian !== null && rec.forcedMedian !== undefined) return rec.forcedMedian;
@@ -155,6 +172,17 @@ for (const specimenId of new Set(report.map((r) => r.specimenId))) {
   }
 }
 
+/*
+ * `Infinity` 經 JSON.stringify 會變成 `null`。輸出檔裡於是出現
+ * `"ratio": null, "treated": 0, "treatedAtFloor": true` —— 只讀 JSON 不看 console 的人
+ * 會把「治療版該指標為零」誤讀成「比值算不出來」。console 分支有處理，寫檔路徑先前沒有。
+ * 改成寫一個明說的字串，並保留 `ratioIsFinite` 讓程式端好判斷。
+ */
+for (const r of ratios) {
+  r.ratioIsFinite = Number.isFinite(r.ratio);
+  if (r.ratio === Infinity) r.ratio = 'treatment-at-or-below-noise-floor';
+}
+
 writeFileSync(out, JSON.stringify({
   mergedFrom: files,
   measuredAt: rounds[0].measuredAt,
@@ -177,7 +205,10 @@ for (const r of report) {
 console.log('\n病變 vs 治療');
 console.log('─'.repeat(120));
 for (const r of ratios) {
-  const rt = r.ratio === null ? "—" : r.ratio === Infinity ? (r.treated ? `≫（治療版 ${fmtN(r.treated)}，在雜訊底線內）` : "∞（治療版該指標為零）") : r.ratio.toFixed(1) + "×";
+  const rt = r.ratio === null ? '—'
+    : !r.ratioIsFinite
+      ? (r.treated ? `≫（治療版 ${fmtN(r.treated)}，在雜訊底線內）` : '∞（治療版該指標為零）')
+      : r.ratio.toFixed(1) + '×';
   console.log(pad(r.specimenId, 24) + pad(r.treatment, 26) + pad(`${fmtN(r.broken)} → ${fmtN(r.treated)}`, 30) + rt);
 }
 function fmtN(v) { return v === null ? '—' : v < 1 ? v.toFixed(4) : v.toFixed(0); }
