@@ -91,6 +91,61 @@ function headerLines(p: PanelProps): string[] {
   return L;
 }
 
+/**
+ * CWV 的官方門檻。**只用來標區間，不用來判定好壞。**
+ *
+ * 本站比的是「同一台機器上病變 vs 治療」，不是「這個網站合不合格」——
+ * 4x 節流下的絕對值本來就過不了門檻，那不代表標本壞了。
+ * 區間標籤存在的理由只有一個：讓讀者知道自己看的數字在真實世界的哪個位置。
+ */
+function rate(value: number, good: number, poor: number): string {
+  if (value <= good) return '良好';
+  return value <= poor ? '需改善' : '差';
+}
+
+/**
+ * LCP / CLS 段。Phase 0 這兩欄一律是 `—`，Phase 2 補上 observer 之後才有數字。
+ *
+ * 「沒有 entry」與「數值是 0」必須看得出差別 —— 這是 spec 一路強調的事，
+ * 而 CLS 特別容易踩：`value: 0` 是「量到了，沒有位移」，`null` 是「還沒收到任何位移」。
+ * 前者是治療成功，後者可能是 observer 根本沒註冊起來。
+ */
+function loadMetricLines(p: PanelProps, m: SpecimenMetrics): string[] {
+  const L: string[] = [];
+  const lcpCulprit = p.meta.culprit === 'lcp' ? '   ← 兇手在這' : '';
+  const clsCulprit = p.meta.culprit === 'cls' ? '   ← 兇手在這' : '';
+
+  if (m.lcp) {
+    const v = m.lcp.value;
+    L.push(`LCP    ${padL(String(Math.round(v)), 6)}ms   ${rate(v, 2500, 4000)}（門檻 2500 / 4000）${lcpCulprit}`);
+    L.push(`         標的 ${m.lcp.elementDescriptor}${m.lcp.url ? ` · ${m.lcp.url}` : '（文字型，無 url）'}`);
+    // renderTime 在跨來源資源上會被遮蔽而退回 loadTime，兩個都列出來才看得出是哪一種
+    L.push(`         renderTime ${ms(m.lcp.renderTime)} · loadTime ${ms(m.lcp.loadTime)} · 相對 iframe 自己的 timeOrigin`);
+    L.push(`         LCP 在第一次互動後就定案 —— 這就是 B 類標本切 mode 必須整份重載的原因`);
+  } else {
+    L.push(`LCP    —      還沒有 candidate（B 類標本要等資源載入；A 類多半沒有意義）`);
+  }
+
+  if (m.cls) {
+    const v = m.cls.value;
+    L.push(`CLS    ${padL(v.toFixed(4), 8)}   ${rate(v, 0.1, 0.25)}（門檻 0.1 / 0.25）${clsCulprit}`);
+    L.push(`         ${m.cls.sessionCount} 個 session window · 回報的是**所有 window 的最大值，不是總和**（spec §4.5）`);
+    if (m.cls.largestShift) {
+      const s = m.cls.largestShift;
+      L.push(`         最大單筆位移 ${s.value.toFixed(4)} · 來源 ${s.sourceDescriptors.join(' , ') || '(無 sources)'}`);
+    }
+  } else {
+    L.push(`CLS    —      還沒收到任何 layout-shift entry（「沒有 entry」≠「值是 0」）`);
+  }
+
+  const ignored = m.custom.clsIgnoredByInput;
+  if (typeof ignored === 'number' && ignored > 0) {
+    L.push(`         ⚠ 有 ${ignored} 筆位移被 hadRecentInput 豁免（互動後 500ms 內的位移不算 CLS）。`);
+    L.push(`            病變版整批被豁免時面板會顯示 CLS 很小 —— 那是操作程序太早碰畫面，不是標本沒病`);
+  }
+  return L;
+}
+
 function inpLines(p: PanelProps): string[] {
   const m = p.metrics;
   if (!m || !m.inp || m.inp.value === null || !m.inp.representative) {
@@ -133,7 +188,7 @@ function inpLines(p: PanelProps): string[] {
   }
 
   L.push(``);
-  L.push(`LCP / CLS   —（Phase 0 不實作，欄位先存在，補上時不動協定、舊數字不作廢）`);
+  L.push(...loadMetricLines(p, m));
 
   const custom = Object.entries(m.custom);
   if (custom.length > 0) {
@@ -141,9 +196,14 @@ function inpLines(p: PanelProps): string[] {
   }
   if (m.crossCheck) {
     const c = m.crossCheck;
-    L.push(
-      `crossCheck  web-vitals inp=${c.inp ?? '—'} Δ=${c.deltaInp ?? '—'}（容差走結論級：max(24ms, 10%) 且同一 CWV 區間）`,
-    );
+    const fmt = (v: number | null, d = 1): string => (v === null ? '—' : v.toFixed(d));
+    // 容差一律是**結論級不是數值級**：目的是確認手刻實作沒有錯得離譜，
+    // 不是證明它完全正確（spec §5.6 第 8 條）。三條容差各自寫在後面。
+    L.push(`crossCheck（web-vitals 對帳；容差走結論級，不是數值級）`);
+    L.push(`  inp  手刻 ${fmt(m.inp?.value ?? null, 0)} · lib ${fmt(c.inp, 0)} · Δ ${fmt(c.deltaInp)}   容差 max(24ms, 10%) 且同一 CWV 區間`);
+    L.push(`  lcp  手刻 ${fmt(m.lcp?.value ?? null, 0)} · lib ${fmt(c.lcp, 0)} · Δ ${fmt(c.deltaLcp)}   容差 50ms **且兩邊選到同一個 elementDescriptor**`);
+    L.push(`  cls  手刻 ${fmt(m.cls?.value ?? null, 4)} · lib ${fmt(c.cls, 4)} · Δ ${fmt(c.deltaCls, 4)}   容差 0.02 或相對 10%，且落在同一門檻區間`);
+    L.push(`  對不上時先懷疑比對範圍：手刻側只算本輪，web-vitals 算整個 document 生命週期`);
   }
   return L;
 }
@@ -216,13 +276,48 @@ function loafLines(p: PanelProps): string[] {
   return L;
 }
 
+/**
+ * 一輪要拿哪個數字去跨輪比較 —— **由標本的主指標決定，不是一律用 INP**。
+ *
+ * 這條分派是 Phase 2 才需要的：標本 #4／#6 的主指標是 `custom.droppedFrames`，
+ * 而捲動不產生 `interactionId`，它們的 `stats.median` 恆為 0。
+ * 一律看 median 的話，那兩個標本的三輪永遠是「0 / 0 / 0，離散度 0%」——
+ * 一個看起來完美、實際上什麼都沒判定的結果。那比沒有判定更危險。
+ */
+function runValue(meta: SpecimenMeta, r: RunResult): number | null {
+  const key = meta.primaryMetric;
+  if (key.startsWith('inp')) return r.stats.median;
+  if (key === 'lcp') return r.lcpFinal?.value ?? null;
+  if (key === 'cls') return r.clsFinal?.value ?? null;
+  if (key.startsWith('custom.')) return r.customFinal?.[key.slice('custom.'.length)] ?? null;
+  // loaf.* 沒有進 RunResult（LoAF 是外殼側的、頁面級的，不屬於某一輪）。
+  // 主指標是 LoAF 的標本要靠 custom 自報一個代理值，否則這裡回 null。
+  return null;
+}
+
+/** 主指標的小數位數。CLS 是無單位小數，其餘是毫秒或次數 */
+function runDigits(meta: SpecimenMeta): number {
+  return meta.primaryMetric === 'cls' ? 4 : 0;
+}
+
 function historyLines(p: PanelProps): string[] {
-  const L = [`歷次 run（同一標本、同一 mode、同一組 conditions 之間才可比）`];
+  const inpBased = p.meta.primaryMetric.startsWith('inp');
+  const L = [
+    `歷次 run（同一標本、同一 mode、同一組 conditions 之間才可比）`,
+    `  跨輪比較的是主指標 ${p.meta.primaryMetric}${inpBased ? ' 的每輪 median' : ' 的每輪終值'}`,
+  ];
   const modes = [...p.meta.modes].sort((a, b) => a.order - b.order);
+  const digits = runDigits(p.meta);
 
   // 進行中那一輪的值也列出來，但標清楚 —— 它還沒入帳，也不進 median
-  const liveValue = p.metrics?.inp?.value;
-  const live = liveValue == null ? null : Math.round(liveValue);
+  const liveRaw = inpBased
+    ? (p.metrics?.inp?.value ?? null)
+    : p.meta.primaryMetric === 'lcp'
+      ? (p.metrics?.lcp?.value ?? null)
+      : p.meta.primaryMetric === 'cls'
+        ? (p.metrics?.cls?.value ?? null)
+        : (p.metrics?.custom[p.meta.primaryMetric.replace('custom.', '')] ?? null);
+  const live = liveRaw == null ? null : Number(liveRaw.toFixed(digits));
 
   for (const m of modes) {
     const runs = p.history.filter((r) => r.specimenId === p.meta.id && r.mode === m.id);
@@ -240,20 +335,27 @@ function historyLines(p: PanelProps): string[] {
     // 拿它做可重現性判定會製造假警報：三輪的 max 各差 30% 完全可能只是一筆離群值，
     // 三輪的 median 各差 30% 才真的代表有變因沒凍住。protocol.ts 的 RunStats 也是這樣定義的：
     // 「median：抗離群。可重現性判定用這個，不用 max」。
-    const values = runs.map((r) => Math.round(r.stats.median));
-    const w = Math.max(...values.map((v) => String(v).length));
-    const listed = values.map((v) => padL(String(v), w)).join(' / ');
+    const raw = runs.map((r) => runValue(p.meta, r)).filter((v): v is number => v !== null);
+    if (raw.length === 0) {
+      L.push(`  ${padR(m.label, 22)}（${runs.length} 輪都沒有 ${p.meta.primaryMetric} 的值）`);
+      continue;
+    }
+    const values = raw.map((v) => Number(v.toFixed(digits)));
+    const fmt = (v: number): string => v.toFixed(digits);
+    const w = Math.max(...values.map((v) => fmt(v).length));
+    const listed = values.map((v) => padL(fmt(v), w)).join(' / ');
     // 跟輪內統計用同一支 computeRunStats。全站只准有一份 median / spread 定義。
     const across = computeRunStats(values);
-    const med = Math.round(across.median);
+    const med = across.median;
     const spread = across.spread;
-    const maxes = runs.map((r) => Math.round(r.stats.max)).join(' / ');
-    const tail = pendingHere === null ? '' : `   (+ 進行中 ${pendingHere})`;
+    const tail = pendingHere === null ? '' : `   (+ 進行中 ${fmt(pendingHere)})`;
     L.push(
-      `  ${padR(m.label, 22)}${listed} · median ${med} · ±${Math.round(spread * 100)}%${tail}`,
+      `  ${padR(m.label, 22)}${listed} · median ${fmt(med)} · ±${Math.round(spread * 100)}%${tail}`,
     );
-    // max 仍然列出來，因為那才是面板頂端報的那個數字 —— 只是不拿它判定可重現。
-    L.push(`  ${padR('', 22)}（各輪回報值 max：${maxes}）`);
+    if (inpBased) {
+      // max 仍然列出來，因為那才是面板頂端報的那個數字 —— 只是不拿它判定可重現。
+      L.push(`  ${padR('', 22)}（各輪回報值 max：${runs.map((r) => Math.round(r.stats.max)).join(' / ')}）`);
+    }
 
     // 門檻是 15% 不是 30%：30% 是 protocol.ts 給**輪內** spread 的提示線，
     // 這裡是**跨輪**離散度，驗收第 16 條的及格線寫的是「三輪 median 相對離散度 ≤ 15%」。
@@ -311,7 +413,16 @@ export function Panel(p: PanelProps) {
     metrics: p.metrics,
     loafFrames: p.loaf.length,
     loafWorst: worst,
-    loafRecent: p.loaf.slice(-3),
+    /*
+     * 最近 6 幀，不是 3 幀。
+     *
+     * Phase 2 把面板文字加長（LCP / CLS / crossCheck 三段）之後，外殼自己的 render
+     * 產生的 LoAF 幀變多了 —— 於是驗收第 6 條（反向歸因）開始間歇性失敗：
+     * 它要找的那個「外殼 200ms 忙迴圈」幀，會被後續幾個外殼 render 幀擠出最後 3 幀的視窗。
+     * **那不是歸因錯了，是取樣窗太窄。** 放寬到 6 幀；第 12 條（destroy 無殘留）
+     * 看的是同一份陣列，窗變寬只會讓它更嚴格，不會放水。
+     */
+    loafRecent: p.loaf.slice(-6),
     history: p.history.map((r) => ({
       runId: r.runId,
       mode: r.mode,

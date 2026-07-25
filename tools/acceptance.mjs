@@ -175,7 +175,7 @@ check(6, '反向歸因：外殼的工作不算在標本頭上',
   shellFrames.length > 0 && !specimenPolluted,
   shellFrames.length
     ? `找到 ${shellFrames.length} 幀 shellScript>100ms，attribution=${shellFrames.map((f) => f.attribution).join(',')}，其中 specimenScript 最大 ${Math.max(...shellFrames.map((f) => f.specimenScriptDuration)).toFixed(1)}ms`
-    : `外殼 200ms 忙迴圈沒產生可辨識的 LoAF 幀（beforeShell=${beforeShell}）`);
+    : `外殼 200ms 忙迴圈沒產生可辨識的 LoAF 幀（loafRecent=${(s6.loafRecent || []).length} 幀，shellScript 最大 ${Math.max(0, ...(s6.loafRecent || []).map((f) => f.shellScriptDuration)).toFixed(1)}ms）`);
 
 // ── #10 + #3b：切 mode，暖機期那一下不得入帳 ──────────────────────────
 const modeBtn = await ptShell('忙迴圈 30ms');
