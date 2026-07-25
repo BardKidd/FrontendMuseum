@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <title>標本 #2 長列表未虛擬化 · 前端效能病理標本館</title>
+    <!--
+      B 類標本：每次切 mode 都是一份全新的 document，LCP 與 CLS 才有意義。
+      這一頁的樣式由標本自己注入 —— 列高同時是 contain-intrinsic-size 的值
+      與虛擬滾動的算式基礎，是量測條件不是排版。
+    -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./02-long-list.ts"></script>
+  </body>
+</html>

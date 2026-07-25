@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- 空 favicon：不寫的話瀏覽器每次載入都去要 /favicon.ico 拿一個 404，
+         console 有紅字會讓人以為量測程式壞了 -->
+    <link rel="icon" href="data:," />
+    <title>標本 #3 強制同步版面重排 · 前端效能病理標本館</title>
+    <!--
+      沒有 stylesheet：Phase 0 不准寫面板 CSS（spec §5.3）。
+      這一頁唯一的樣式是清單的行高與內距，由標本自己注入 —— 因為那組值決定文字
+      在哪個寬度換行，也就決定每次強制結算的工作量。那是量測條件，不是排版。
+    -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./03-layout-thrashing.ts"></script>
+  </body>
+</html>
