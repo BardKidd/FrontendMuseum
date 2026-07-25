@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 空 favicon：不寫的話瀏覽器每次載入都去要 /favicon.ico 拿一個 404，
+         console 有紅字會讓人以為量測程式壞了 -->
+    <link rel="icon" href="data:," />
+    <title>前端效能病理標本館</title>
+    <!--
+      這裡沒有任何 <link rel="stylesheet">，是刻意的：
+      Phase 0 明文規定不准寫任何一行面板 CSS（spec §5.3），面板整個是 <pre> 純文字。
+      排版是 Phase 3 的事，現在寫等於把週末花在最容易失控的地方。
+    -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/shell/main.tsx"></script>
+  </body>
+</html>

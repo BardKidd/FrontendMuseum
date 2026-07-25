@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- 空 favicon：不寫的話瀏覽器每次載入都去要 /favicon.ico 拿一個 404，
+         console 有紅字會讓人以為量測程式壞了 -->
+    <link rel="icon" href="data:," />
+    <title>校準標本 · 前端效能病理標本館</title>
+    <!--
+      沒有任何 stylesheet 是刻意的：Phase 0 明文禁止面板 CSS（spec §5.3），
+      而校準件連自己的視覺都不需要 —— 它唯一的產出是可以反推的數字。
+      實驗區尺寸由外殼的 iframe 凍結（800×600），這一頁不准自己決定寬高。
+    -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./00-calibration.ts"></script>
+  </body>
+</html>
