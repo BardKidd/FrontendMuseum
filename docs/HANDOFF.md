@@ -46,9 +46,15 @@
 
 ## ⚠️ 接手前必須知道的四件事
 
-1. **`02-long-list` 本輪判 unstable，而它一個字都沒改。**
-   `broken` 離散度 34.0%（1872/2620/2200）、`fixed-virtual` 110.7%（932/1236/**204**）。
-   204ms 那一輪疑似 B 類輪替下的 LCP 取樣問題。**不要拿本輪的 #2 數字發表。**
+1. ~~**`02-long-list` 本輪判 unstable，不要拿本輪的 #2 數字發表。**~~
+   **（2026-07-26 稍晚解除）** 查出來不是標本不穩，是 **B 類前導污染** ——
+   iframe 與外殼共用同一條 renderer 主執行緒，前一份 document 的殘留工作落在
+   新 document 的時鐘之內，而 LCP 以新 document 的 timeOrigin 起算。
+   已修（deep-link `?specimen=&mode=&cpu=`，每筆樣本全新導覽 + 丟棄式暖身），
+   回歸測試是 `tools/b-class-isolation.mjs`。修完 **#2 / #5 七臂全部可重現**，
+   數字可發表，取 `docs/measurements/2026-07-26-reproducibility-4x-5.json`。
+   完整診斷與作廢清單在 `docs/phase2-expected-results.md` 的
+   「修正紀錄 · B 類前導污染」。
 2. **`01` 的 `fixed-worker` 沒通過「三輪兇手一致」**（inputDelay/presentation/inputDelay）。
    那一臂本輪不得單獨發表。處置順序寫在 `docs/phase1-expected-results.md`。
 3. **4x CPU 節流套不到 worker 執行緒。** `Emulation.setCPUThrottlingRate` 掛在 renderer

@@ -945,3 +945,139 @@ LCP 標的三輪穩定且逐臂不同（broken `p#ls-caption` / `fixed-image` `d
   **跨 session 的絕對值不可比，只有同一份 JSON 內部的比值可比** —— 這條要寫進方法論段。
 - `01-main-thread-block` 的 `fixed-worker`：兇手三輪不一致
   （inputDelay / presentation / inputDelay）。見 `docs/phase1-expected-results.md` 的實測結果。
+
+---
+
+## 修正紀錄 · B 類前導污染（2026-07-26，同日稍晚）
+
+上一節結尾登記的「`02-long-list` 本輪出現不穩定、待查」查完了。
+**不是標本的問題，是量測方式的問題**，而且它同時讓已發出文章的 #2 兩格作廢。
+
+### 根因
+
+B 類切 mode 會重載 iframe 的 document，但 **iframe 與外殼共用同一條 renderer 主執行緒**。
+前一份 document 的拆除與殘留工作落在**新 document 的時鐘之內**，而 LCP 取的是
+`entry.startTime`，以新 document 的 timeOrigin 起算 —— 於是 LCP 帶著一個
+由「前導 mode 有多重」決定的加項。
+
+證據鏈（每一項單一變因、實跑重現，`tools/b-class-isolation.mjs` 是它的回歸測試）：
+
+| # | 觀察 |
+|---|---|
+| 1 | 同一支 `fixed-virtual`，前導 `broken` 時 LCP 172~180ms，前導 `fixed-content-visibility` 時 888~892ms |
+| 2 | 差距**全部**落在新 document 的 `responseEnd → DCL` 之間；`responseEnd` 一律 13~262ms，不是抓取問題 |
+| 3 | 141 個節點的 document 載入耗時是 40,021 個節點那份的**五倍** —— 結構上不可能在描述標本 |
+| 4 | 切換前插 15 秒靜置排不掉（0ms 組 8632/9048/9744，15000ms 組 1676/7692/7436） |
+
+**這個缺陷沒有症狀。** 舊的 `for r { for m of modes }` 讓每個 mode 的前導永遠相同，
+污染因此是常數 —— 三輪離散度看起來漂亮，而它靜靜地烙進臂間比值裡。
+2026-07-26 上午改成輪轉順序，只是把它掀開；掀開後的 110.7% 是**症狀**，不是病。
+
+### 順帶查出的第二個缺陷：輪轉守衛把輪轉吃掉了
+
+`tools/reproducibility.mjs` 舊碼：
+
+```js
+let order = rot(r - 1);
+if (order[0].id === current) order = rot(r % n);   // ← current 初值就是 modes[0].id
+```
+
+`r = 1` 必定觸發守衛被推成 `rot(1)`，而 `r = 2` 算出來也是 `rot(1)`。
+**第一輪與第二輪順序完全相同**，三輪只有兩種順序。註解宣稱「每一輪輪轉一格」，
+程式做的是「兩輪相同 + 一輪輪轉」。
+
+### 修法
+
+1. 外殼加 deep-link `?specimen=&mode=&cpu=`（`src/shell/App.tsx`）。
+   **每一筆 B 類樣本都從一次全新的 `measure.html` 導覽開始**，目標 mode 就是首載的
+   那一份 document，前導成本歸零。
+2. 節流在**導覽之前**打開，並用 `cpu=` 宣告，不再按下拉選單 ——
+   「載入後補按一次選單」那個 `evaluate()` 會插進正在量的載入期。
+   代價是外殼自己的 bundle 也在 4x 底下解析，那是每筆樣本相同的常數。
+3. 守衛的存在前提（同一個 mode 連按兩次不會重載）隨之消失，整個守衛移除；
+   輪轉留著擋單調漂移。
+4. 加**一次丟棄的暖身導覽**：隔離修好後剩下的最後一個位置效應是每支標本第一筆偏高
+   （#2 broken 第一筆 2824ms、之後 2016 / 1948；#5 broken 第一筆 LCP 140ms、之後 80 / 84），
+   偏高的是冷啟動不是那個 mode。
+
+### 修完的實測（`docs/measurements/2026-07-26-reproducibility-4x-4.json`）
+
+```
+02-long-list  broken                    2072 / 2056 / 1936    6.6%   ✅reproducible
+02-long-list  fixed-content-visibility   568 /  580 /  524    9.9%   ✅reproducible
+02-long-list  fixed-virtual              100 /   88 /   92   13.0%▽  ✅reproducible
+05-layout-shift  broken                 0.2474 / 0.2474 / 0.2694   8.9%  ✅
+05-layout-shift  fixed-image            0.1021 ×3                  0.0%  ✅
+05-layout-shift  fixed-font             0.0887 ×3                  0.0%  ✅
+05-layout-shift  fixed-banner           0.0000 ×3                  0.0%  ✅
+```
+
+**兩支 B 類標本七條臂全部可重現。**
+
+### 作廢清單
+
+| 出處 | 作廢的數字 | 正確值 |
+|---|---|---|
+| 已發出文章表格「#2 長列表 · `content-visibility` LCP 1360 → 592ms ✅ 乾淨有效」 | 比值 2.3× | 3.6×（2056 → 568） |
+| 已發出文章表格「#2 長列表 · 虛擬滾動 LCP 1360 → 680ms ⚠️」 | 比值 2.0× | **22.3×**（2056 → 92） |
+| 本輪上午 `2026-07-26-reproducibility-4x.json` 的 #2 全部九筆 | 全數 | 由 `-4.json` 取代 |
+| 上一輪 `2026-07-25-reproducibility-4x.json` 的 #2 全部九筆 | 全數 | 同上 |
+
+`fixed-virtual` 的真實 LCP 是 92ms。已發表的 680ms 裡有約 588ms 是前一個 mode 的殘留 ——
+**污染項是訊號的六倍**，而該臂當時被判為「只有這一臂被儀器加了負載」的保留意見，
+保留的理由完全指錯了方向。
+
+依 repo 規矩 5，已發出的文章不改，這些寫進第二篇。
+
+### 沒有被這個缺陷影響的
+
+- **`05-layout-shift` 的 CLS 完全未受污染。** 四臂三輪逐位元相同，且與修前同值。
+  CLS 是無單位的版面位移量，不掛 document 時鐘 —— 修完的實測證實了這個推論。
+- **A 類標本（#1 / #3 / #4 / #6）全部不受影響。** 它們不重載 document，
+  主指標也不以 document 起點為基準。上午那輪的 A 類數字仍然有效。
+
+### 仍未處理
+
+- 「三輪兇手一致」這條判準只檢查三輪彼此一致，**不檢查是否等於登記值**。
+  標本 #1 登記 `inputDelay`、實際一致地是 `presentation`，判準照樣通過。
+- 冷啟動效應目前用「丟一次暖身」處理，沒有量化它到底多大、衰減多快。
+
+### 補記 · 隔離修好後的完整六標本掃描
+
+上一節的數字取自 `2026-07-26-reproducibility-4x-4.json`，那是**只跑 #2 / #5 的驗證輪**。
+之後又跑了一次完整六標本掃描，**`docs/measurements/2026-07-26-reproducibility-4x-5.json`
+（66 筆、`problems: []`、`isFullSweep: true`）才是現行的正典檔** ——
+所有臂間比值都該引它，因為只有同一份 JSON 內部的比值可比。
+
+```
+02  broken 1864/1788/1896 (5.8%)  cv 472/548/520 (14.6%)  virtual 84/76/80 (10.0%▽)
+    比值 3.6× / 23.3×
+05  broken 0.2694 ×3 (0.0%)  image 0.1021 ×3  font 0.0887 ×3  banner 0 ×3
+    比值 2.6× / 3.0× / ∞
+```
+
+22 條臂裡 19 條可重現。不可重現的三條（`01 fixed-worker` 34.5%、`04 fixed-observer` 54.5%、
+先前的 `06 fixed-granular`）全部是逼近雜訊底線的治療臂。
+
+**兩件跨輪對照出來、必須寫進方法論的事：**
+
+1. **這一輪機器比上午快且穩得多。** `01` 的 `sortMs` 上午 132.2/142.6/180.1ms（輪內 36% 抖動）、
+   本輪 110.7/111.6/113.9ms（3%）；`mainCalibrationMs` 11.1 → 10.6。
+2. **機器變快讓標本 #1 的兇手翻面。** 上午 `inputDelay` 0.4~3.9ms、`presentation` 1373~1585ms，
+   三輪一致 presentation；本輪 `inputDelay` 0.8 / 798.5 / 700.9ms、`presentation` 951.3 / 120.2 / 238.6ms，
+   三輪不一致。機制是已登記過的那條 ——「**INP 看不看得見排隊，取決於排隊期間瀏覽器有沒有機會畫**」：
+   機器變快之後，十次排隊的點擊中間開始塞得進一次 paint，排隊就從 `presentation` 浮出來變成 `inputDelay`。
+   **這支標本正好卡在那條界線上**，所以同一臂三輪會跳。新加的「兇手 vs 登記值」判準把它標成 `⚠不一致`。
+   ⚠️ 這代表 `01` 的兇手歸因是**機器速度的函數**，而登記值 `presentation` 是上午（較慢的機器）
+   量出來後改的。不在此處改登記 —— 依規矩 2，留待下一輪裁決。
+3. **`06 fixed-granular` 的掉幀峰值 85/59/84 → 14/18/18，而工作量一格沒動**
+   （`batchesReceived` 200×3 兩輪相同、`updatesApplied` ~18.6k → ~18.8k、
+   `renderFrameGapMedianMs` 16.7×3 兩輪相同），同時 `broken` 的掉幀兩輪幾乎相同（281/284/277 → 281/277/275）。
+   **病變臂飽和了所以對機器速度不敏感，治療臂沒飽和所以敏感** —— 於是比值本身是機器速度的函數。
+   3.3× 與 15.4× 都是真的，差別在機器。**跨 session 比較治療臂的比值是無效的**，
+   這比先前登記的「跨 session 絕對值不可比」更強一級。
+
+**判準補強**：`tools/analyze-repro.mjs` 加了「三輪一致的兇手 vs `src/specimens.ts` 登記的 `culprit`」比對，
+六種狀態分開（`matches-registered` / `no-registered-value` / `not-an-inp-segment` / `no-samples` /
+`unstable` / 不等於登記值時印 `⚠登記為 x`）。只比對 `kind: 'pathological'` 那一臂 ——
+治療臂換兇手正是治療本身，比對會誤報。已用人工造假資料實跑驗證警示會觸發。
