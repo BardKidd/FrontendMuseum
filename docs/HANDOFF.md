@@ -104,9 +104,11 @@ Phase 3 要動面板 CSS 時就是回去接它的時候。
 ## 提交狀態
 
 本輪全部**已 commit 並 push** 到 `phase1-2/specimens-and-measure`（追蹤 `origin`）。
-按工作線拆成九個 commit：
+按工作線拆成十一個 commit：
 
 ```
+b0441f8  docs(CLAUDE.md)    首頁的視覺設計系統定案
+cc94a68  docs               HANDOFF 的提交狀態校正
 2c5212a  refactor(routing)  首頁移到 /，量測台移到 /measure.html
 78f88e5  feat(home)         首頁與標本索引（Hallmark · Stat-Led + Almanac）
 6f12263  docs(shell-visual) Task 1 基線 —— 另一條工作線，刻意單獨一個
