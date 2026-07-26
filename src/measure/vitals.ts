@@ -130,7 +130,8 @@ interface LayoutShiftEntry extends PerformanceEntry {
  *   - 這個 session 已經超過 5000ms → 開新 session
  *
  * **CLS 是所有 session window 的最大值，不是總和。** 這是最多人算錯的地方（spec §4.5），
- * 也正是標本 #5 的教學重點：三個位移源分別發生在載入後 0.2s / 0.8s / 1.5s，
+ * 也正是標本 #5 的教學重點：三個位移源分別發生在載入後 0.3s / 0.9s / 1.5s
+ *（程式是 300 / 900 / 1500ms —— 先前這裡寫 0.2 / 0.8 / 1.5 與程式不符），
  * 加總與取最大值會給出完全不同的數字，而只有後者是 CLS。
  *
  * `hadRecentInput` 的 500ms 豁免窗由瀏覽器自己標記：使用者剛互動過而產生的位移

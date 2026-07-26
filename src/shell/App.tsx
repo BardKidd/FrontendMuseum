@@ -478,7 +478,10 @@ export function App() {
           : `${meta.protocol.intervalMs}ms`}
       </p>
       <p>
-        {meta.protocol.intervalMs !== null && (
+        {/* 機器節拍的標本不渲染節拍器：它的 setInterval + 每拍一次 setState
+            會落在待量的那一段裡，而標本 #1 的兇手段正是 presentation。
+            人也照不了 17ms 的拍子 —— 照著做出來的是另一個實驗。 */}
+        {meta.protocol.intervalMs !== null && !meta.protocol.machinePaced && (
           <Metronome
             key={runId}
             intervalMs={meta.protocol.intervalMs}

@@ -61,9 +61,31 @@ export const CALIBRATION_META: SpecimenMeta = {
 /**
  * 標本 #1 —— 主執行緒阻塞。
  *
- * 兇手是 input delay，不是 processing：單獨點一下只會看到 processing 爆掉，
- * 要連打才會看到事件排在後面等主執行緒（spec §4.1）。
- * 所以 protocol.intervalMs 必須是 null（盡快連續）—— 操作程序是凍結變因的一部分。
+ * ⚠️ **兇手登記值在 2026-07-26 從 `inputDelay` 改成 `presentation`。**
+ * 這不是改結論去迎合實測，是登記值被實測否證：2026-07-25 的三輪原始資料裡
+ * `broken` 的 INP 拆解是 inputDelay 1.2~1.8ms / processing 135~143ms /
+ * presentation 1120~1240ms，三輪一致 —— 一致地是 presentation。
+ *
+ * 而且這是**結構性的，不是間隔造成的**。對同步阻塞 handler 只有兩種區間，中間沒有縫：
+ *   - `I ≥ S`（單次排序成本）⇒ 完全不排隊，兇手是 processing（退化成標本 #3）
+ *   - `I < S` ⇒ 事件排隊，但十個 handler 連續跑完才輪到一次 paint，
+ *     每一發都結束在**同一次** paint。`duration_k = T_paint − start_k`，
+ *     最早開始的那一發最大 ⇒ **INP 的代表樣本恆為第一發**，而它前面沒有隊可排
+ *     ⇒ inputDelay ≈ 0，兇手是 presentation。
+ *
+ * 所以「排隊」這件事 INP 看不見，不是因為間隔沒調對，是因為 INP 取的是最差的**單筆**。
+ * 階梯改由標本自報的 `inputLagMaxMs` 呈現（handler 進入時刻 − 事件產生時刻），
+ * 它不經過 INP 的取樣規則。完整推導與作廢清單在 `docs/phase1-expected-results.md` 修正紀錄。
+ *
+ * 與標本 #3 的對照因此改寫成：同樣是主執行緒被佔住，
+ * #1 的代價落在 **presentation**（畫面遲遲不更新），#3 落在 **processing**（handler 自己慢）。
+ *
+ * `protocol.intervalMs` 同日從 `null`（盡快連續）改成 17ms 的機器節拍 ——
+ * `null` 不是一個值，是「驅動器有多快就多快」，沒有人宣告、沒有人量、換台機器複製不出來。
+ * 17 的三條邊界（上界 I < S、下界 I ≥ 一個 60Hz 幀、斜率算式）記在
+ * `specimens/01-main-thread-block.ts` 檔頭。**驅動器必須絕對排程**：
+ * 第 k 發打在 `t0 + k × I`，不是「上一發回來之後再等 I」—— 後者會被主執行緒的忙碌
+ * 反過來決定節拍，那就不是凍結變因（已發出文章 §六（二）記錄過這個踩坑）。
  */
 export const MAIN_THREAD_BLOCK_META: SpecimenMeta = {
   id: '01-main-thread-block',
@@ -91,15 +113,23 @@ export const MAIN_THREAD_BLOCK_META: SpecimenMeta = {
     },
   ],
 
-  primaryMetric: 'inp.inputDelay',
-  secondaryMetrics: ['inp', 'inp.processing', 'loaf.specimenScriptDuration'],
-  culprit: 'inputDelay',
+  primaryMetric: 'inp.presentation',
+  secondaryMetrics: ['inp', 'inp.inputDelay', 'inp.processing', 'loaf.specimenScriptDuration'],
+  culprit: 'presentation',
 
+  /**
+   * 17ms 是機器節拍，不是「模擬使用者連打」。人手連打約 150ms 一下，
+   * 而 150 > S ⇒ 完全不排隊，那是另一個實驗（探針實測 INP 120ms、兇手 processing）。
+   * 這一格的數字只在 CDP 絕對排程下成立，散文不准寫成「模擬連打」。
+   */
   protocol: {
     action: 'click',
     repetitions: 10,
-    intervalMs: null,
-    instruction: '連續快速點擊「排序訂單」十次，不要等畫面回應 —— 越快越好。',
+    intervalMs: 17,
+    instruction:
+      '這一格是機器節拍：每 17ms 派送一發、共十發、不等畫面回應（絕對排程，第 k 發打在 t0 + k×17ms）。'
+      + '人手複驗做不到這個節奏，做出來的是另一個實驗 —— 請看驅動器的輸出，不要用手點。',
+    machinePaced: true,
   },
 
   viewport: FROZEN_VIEWPORT,
@@ -249,9 +279,21 @@ export const UNTHROTTLED_EVENTS_META: SpecimenMeta = {
   protocol: {
     action: 'scroll',
     repetitions: 10,
-    // 十次 × 500ms = 5 秒，正好填滿 droppedFrames 的 5 秒滾動窗
+    // 十拍 × 500ms = 5 秒，正好填滿 droppedFrames 的 5 秒滾動窗
     intervalMs: 500,
-    instruction: '每次節拍亮起時在清單上滾一格滑鼠滾輪，共十次。用滾輪，不要拖捲軸。',
+    /**
+     * 2026-07-26：從「滾一格、共十次」改成「連滾三格、共十拍」。
+     *
+     * 一拍只滾一格時，rAF 閘門**一次都沒觸發過** —— 一幀之內永遠沒有第二個事件
+     * 可以合併，所以「治療二：rAF 節流」量到的數字不是它的效果，是它從未進入作用區間。
+     * 三輪原始資料裡 `fixed-raf` 與 `fixed-passive` 的 `passes` / `rectReads`
+     * 逐輪完全相同，就是這件事的直接證據。
+     *
+     * ⚠️ 這是 protocol 的一部分，不是驅動器的內部細節：
+     * `tools/reproducibility.mjs` 的 `SPECS[04].wheelTicks` 與這句話必須同時改，
+     * 否則人手複驗做的不是機器做的那件事（spec §1 原則 3）。
+     */
+    instruction: '每次節拍亮起時在清單上連滾三格滑鼠滾輪，共十拍。用滾輪，不要拖捲軸。',
   },
 
   viewport: FROZEN_VIEWPORT,
@@ -278,9 +320,21 @@ export const LAYOUT_SHIFT_META: SpecimenMeta = {
 
   class: 'B',
   switchKind: 'reload',
+  /**
+   * 2026-07-26：單一 `fixed` 臂拆成梯度三段。
+   *
+   * 修好位移源二（字族換入原本不產生任何 entry）之後，原本那一臂的三條 CSS
+   * 全部生效 —— 它一次翻三個變因，而已發出的文章正是用「一段治療只准翻一個變因」
+   * 這把尺判過標本 #4 的死刑。同一把尺量下去，不拆就是自己的標本退讓。
+   *
+   * 拆法照標本 #4 的形狀：**每一臂相對前一臂只翻一個變因**，三條 CSS 是累加的，
+   * 不是三選一。`fixed-banner` 同時帶著前兩段的預留。
+   */
   modes: [
     { id: 'broken', label: '病變：三個位移源', kind: 'pathological', order: 0 },
-    { id: 'fixed', label: '治療：全部預留空間', kind: 'treatment', order: 1 },
+    { id: 'fixed-image', label: '治療一：圖片 aspect-ratio', kind: 'treatment', order: 1 },
+    { id: 'fixed-font', label: '治療二：再預留內文行高', kind: 'treatment', order: 2 },
+    { id: 'fixed-banner', label: '治療三：再預留橫幅', kind: 'treatment', order: 3 },
   ],
 
   primaryMetric: 'cls',
@@ -316,7 +370,7 @@ export const RERENDER_STORM_META: SpecimenMeta = {
   id: '06-rerender-storm',
   order: 6,
   title: 're-render 風暴',
-  subtitle: '每 50ms 推一批裝置狀態，病變版每批都重建整張 200 列清單 —— 每秒 20 次全表重繪',
+  subtitle: '每 25ms 推一批裝置狀態，病變版每批都重建整張 1000 列清單 —— 每秒 40 次全表重繪',
 
   class: 'A',
   switchKind: 'live',
@@ -324,7 +378,17 @@ export const RERENDER_STORM_META: SpecimenMeta = {
     { id: 'broken', label: '病變：每批重建整表', kind: 'pathological', order: 0 },
     { id: 'fixed-batch', label: '治療一：批次化 + rAF', kind: 'treatment', order: 1 },
     { id: 'fixed-granular', label: '治療二：只改變動的節點', kind: 'treatment', order: 2 },
-    { id: 'fixed-backpressure', label: '治療三：背壓丟中間狀態', kind: 'treatment', order: 3 },
+    /**
+     * 2026-07-26 從「治療三：背壓丟中間狀態」改名。
+     *
+     * 治療梯度是**樹狀不是鏈狀**：背壓接在 `fixed-batch` 之下，與 `fixed-granular`
+     * 是兄弟不是後繼（前者翻「渲染的次數」，後者翻「每一次渲染的成本」）。
+     * 叫「治療三」會讓讀者以為它是「治療二再加一點」，而那正是本專案要消滅的那種誤讀。
+     *
+     * ⚠️ `tools/reproducibility.mjs` 的 `SPECS[06].modes` 必須逐字相同 ——
+     * 驅動器靠 `textContent.includes(label)` 點按鈕。
+     */
+    { id: 'fixed-backpressure', label: '治療二乙：背壓降頻', kind: 'treatment', order: 3 },
   ],
 
   primaryMetric: 'custom.droppedFramesPeak',
