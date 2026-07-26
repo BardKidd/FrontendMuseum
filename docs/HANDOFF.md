@@ -101,13 +101,22 @@ Phase 3 要動面板 CSS 時就是回去接它的時候。
 ⚠️ 該計畫的 Global Constraints 已失真（它寫「這個目錄不是 git repo」「這輪不提交」，
 實際上是 repo、有 remote、已 push）。
 
-## 未提交的改動
+## 提交狀態
 
-本輪全部**尚未 commit**（使用者未要求）。橫跨：
-`specimens/01,04,05,06`、`src/{protocol,specimens}.ts`、`src/shell/App.tsx`、
-`src/measure/vitals.ts`、`tools/{reproducibility,analyze-repro}.mjs`、
-`docs/phase{1,2}-expected-results.md`、`docs/measurements/2026-07-26-*.json`、
-新增的 `CLAUDE.md` 與本檔。
+本輪全部**已 commit 並 push** 到 `phase1-2/specimens-and-measure`（追蹤 `origin`）。
+按工作線拆成九個 commit：
 
-另有兩份 session 開始前就在的 `shell-visual` 工作線改動
-（`docs/superpowers/plans/` 底下兩個檔），**與本輪無關，拆 commit 時要分開。**
+```
+2c5212a  refactor(routing)  首頁移到 /，量測台移到 /measure.html
+78f88e5  feat(home)         首頁與標本索引（Hallmark · Stat-Led + Almanac）
+6f12263  docs(shell-visual) Task 1 基線 —— 另一條工作線，刻意單獨一個
+2b14dd4  docs               CLAUDE.md
+f3fdb77  docs               重新登記 + 實測結果 + 作廢清單
+653b15d  fix(tools)         絕對排程、檔名不再覆蓋原始資料、補充指標
+fe4f795  fix(specimens)     四個設計缺陷
+1a613da  feat(protocol)     machinePaced 欄位
+9ecbaf8  fix(tools)         （上一輪）量測工具自身的四個缺陷
+```
+
+**尚未合併回 `main`** —— `main` 還停在 `0014c92`（Phase 0 baseline）。
+PR：`https://github.com/BardKidd/FrontendMuseum/pull/new/phase1-2/specimens-and-measure`
