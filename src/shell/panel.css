@@ -1,0 +1,526 @@
+/* 量測面板的樣式 —— 檢驗報告。
+ *
+ * 設計沿用首頁 `/` 已定案的 Hallmark / Almanac 系統（CLAUDE.md「視覺設計系統」一節）：
+ * 暖燕麥紙、年鑑式的衡線與表格、單一 accent（氧化血紅 hue 28）、
+ * display 襯線 + body 無襯線 + mono outlier，全部系統字體堆疊、零外部請求。
+ *
+ * ⚠️ 這裡是量測儀器，不是首頁。首頁可以放開手做，正因為它不在量測路徑上；
+ * 這個檔案在量測路徑上，所以多了一整套紀律（spec §3.2：iframe 不隔離 INP 的
+ * presentation 段，面板的 style / layout 成本會落在互動的同一幀）：
+ *
+ *   禁 transition / animation / @keyframes      ← 首頁的 .reveal / .chip 那套不准搬過來
+ *   禁 box-shadow / filter / backdrop-filter
+ *   禁 position: sticky / position: fixed        ← 校準錨點 B 被 fixed 毀過一次（30 倍）
+ *   禁 content-visibility                        ← 見下方「為什麼沒有 content-visibility」
+ *   :hover 只准改 color / background-color / text-decoration / outline，不准動盒模型
+ *   面板每 250ms 重繪一次，所以每一條規則的代價都要乘上 4 Hz
+ *
+ * 加東西之前先問：博物館的標本說明牌上會有這個嗎？不會就不要加。
+ *
+ * ── 為什麼沒有 content-visibility ──
+ * 原計畫（docs/superpowers/plans/2026-07-25-shell-visual-design.md §CSS 紀律 4）
+ * 要長列表加 `content-visibility: auto`。這裡刻意不加：面板上根本沒有長列表 ——
+ * top scripts 固定 5 筆、最近幾幀 6 筆、診斷訊息上限 20 筆（App.tsx 的 NOTE_MAX）。
+ * `content-visibility: auto` 自己要做視窗相交判定，套在十來個元素上是淨虧。
+ * 真正大的是原始檢體 JSON，它在 <details> 裡，收合時瀏覽器本來就不排版。
+ *
+ * ── 為什麼所有規則都掛在 .rep 底下 ──
+ * 外殼其餘部分（App.tsx 的標本選單、mode 按鈕、操作程序）還沒做視覺，而它們不屬於
+ * 這個檔案的所有權範圍。全域選擇器（body / button / h1…）會改到量測面上還沒被登記的
+ * 元素，那是偷偷換掉一次實驗器材。要動外殼版面請走原計畫的 Task 4–7。
+ */
+
+/* tokens.css 的檔頭寫明「要把這套系統帶到別的頁面（例如 Phase 3 的面板視覺）時
+   import 這個檔」。單一來源，不在這裡重抄一份色票 —— 抄了就會漂移。 */
+@import '../../tokens.css';
+
+/* ─────────── 根 ─────────── */
+
+.rep {
+  /* 堆疊條的兩段中性色。相鄰兩段靠 1px 衡線分界，不靠色差（兩者對比只有 ~2.6:1） */
+  --rep-seg-a: var(--color-neutral);
+  --rep-seg-b: var(--color-muted);
+
+  max-width: 74rem;
+  margin: var(--space-xl) 0 0;
+  padding: var(--space-lg) var(--space-lg) var(--space-xl);
+  border: var(--rule-hair) solid var(--color-rule);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  /* 數字位數變動時不推版。這取代舊面板手刻的全形字寬對齊（isWide / padL / padR） */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* 量測面**刻意不跟隨系統深色**。
+ *
+ * 截圖是這個站的產出物（docs/articles/ 是有日期的快照，已發出就不回頭改）。
+ * 同一組數字在兩套主題下會產生兩種圖，不同文章裡的圖就對不起來。
+ * 首頁沒有這個問題，所以首頁跟隨系統；這裡把 tokens.css 的深色覆寫在面板範圍內
+ * 還原成 Almanac 的淺色值 —— 值與 tokens.css 的 :root 逐字相同，換色票時兩處要一起改。
+ */
+@media (prefers-color-scheme: dark) {
+  .rep {
+    --color-paper: oklch(97% 0.008 80);
+    --color-paper-2: oklch(94.5% 0.011 78);
+    --color-rule: oklch(84% 0.010 70);
+    --color-rule-2: oklch(90% 0.008 74);
+    --color-neutral: oklch(58% 0.009 60);
+    --color-muted: oklch(43% 0.009 55);
+    --color-ink: oklch(21% 0.011 45);
+    --color-accent: oklch(45% 0.145 28);
+    --color-focus: oklch(52% 0.170 28);
+  }
+}
+
+.rep :focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+/* ─────────── 區塊骨架 ─────────── */
+
+/* contain: content = layout paint style。面板重繪不外溢到 iframe 所在的格線，
+   也不會讓外殼的 style recalc 掃過整個 document。 */
+.rep-sec {
+  contain: content;
+  border-top: var(--rule-hair) solid var(--color-rule);
+  padding-block: var(--space-lg);
+}
+
+.rep-sec:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+/* 區塊標籤。中文沒有小型大寫可用，所以靠字級 + 字距 + 弱化色分層 */
+.rep-h {
+  margin: 0 0 var(--space-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--color-muted);
+}
+
+.rep p {
+  margin: 0;
+}
+
+.rep p + p {
+  margin-top: var(--space-xs);
+}
+
+/* 註腳級的說明文字。面板上大部分的誠實揭露都是這一級 —— 弱化但**不隱藏** */
+.rep-note {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+/* 作廢通知 / 量化假影 / 離散度超標。accent 在整個面板只有兩種用途：
+   兇手段，與「這個數字有條件」。稀有才有重量。 */
+.rep-alert {
+  margin-top: var(--space-sm);
+  padding-inline-start: var(--space-sm);
+  border-inline-start: 2px solid var(--color-accent);
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+}
+
+/* 選擇器多帶一層 .rep 是為了贏過 `.rep-rows dt` 之類的區塊色 ——
+   兇手標記必須壓過任何弱化色，否則它會在某些區塊靜靜消失 */
+.rep .is-culprit {
+  color: var(--color-accent);
+}
+
+/* 主打指標標記。mono outlier 在這裡是對的：它承載的是機器產生的字串
+   （`inp.presentation` / `custom.droppedFramesPeak`），不是散文 */
+.rep-tag {
+  margin-inline-start: var(--space-xs);
+  padding-inline: var(--space-2xs);
+  border: var(--rule-hair) solid var(--color-rule);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.rep code,
+.rep .mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+/* 長的 sourceURL / elementDescriptor 不准撐爆區塊（.rep-sec 有 paint containment，
+   撐爆就是被裁掉，而被裁掉的是證據） */
+.rep-break {
+  overflow-wrap: anywhere;
+}
+
+/* ─────────── 凍結條件 ─────────── */
+
+.rep-no {
+  font-family: var(--font-mono);
+  color: var(--color-muted);
+  margin-inline-end: var(--space-xs);
+}
+
+.rep-name {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+
+.rep-sub {
+  margin-top: var(--space-2xs);
+  color: var(--color-muted);
+  max-width: var(--measure);
+}
+
+/* 標籤欄用 max-content 而不是 %：標籤是四個固定詞，讓它自己決定寬度 */
+.rep-kv {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-2xs) var(--space-md);
+  margin: var(--space-md) 0 0;
+}
+
+.rep-kv dt {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.rep-kv dd {
+  margin: 0;
+  min-width: 0;
+}
+
+/* ─────────── 主指標 ─────────── */
+
+/* 首頁的 .figure 同一個角色：mono outlier 只承載「量到的值」 */
+.rep-figure {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  margin: var(--space-2xs) 0 0;
+  font-family: var(--font-mono);
+  font-size: clamp(2.4rem, 7vw, 3.6rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-weight: 500;
+}
+
+.rep-figure .unit {
+  font-family: var(--font-display);
+  font-size: 0.28em;
+  letter-spacing: 0.02em;
+  color: var(--color-muted);
+}
+
+/* 「還沒量到」的排版。**不准跟「量到 0」共用同一個視覺** ——
+   標本 #3 治療版的全部結論建立在這個區別上（forced layout 真的是 0，不是沒觀測到）。 */
+.rep-nodata {
+  color: var(--color-muted);
+}
+
+.rep-nodata__mark {
+  font-family: var(--font-mono);
+  color: var(--color-muted);
+}
+
+/* 行內的「還沒量到」多一條點線：跟 `0.0000` 這種**量到的**零並排時，
+   光靠一個破折號還不夠分 */
+.rep-nodata .rep-nodata__mark {
+  border-bottom: 1px dotted var(--color-neutral);
+  margin-inline-end: var(--space-2xs);
+}
+
+/* ─────────── 三段堆疊條 ─────────── */
+
+.rep-bar {
+  display: flex;
+  height: 1.75rem;
+  margin: var(--space-md) 0 var(--space-xs);
+  border: var(--rule-hair) solid var(--color-ink);
+  background: var(--color-paper-2);
+}
+
+/* 尚無樣本：虛線空框，**一段都不畫**。有樣本但某段是 0 畫的是實線刻度，
+   兩者在視覺上必須分得開（見 .rep-seg--tick） */
+.rep-bar--empty {
+  border-style: dashed;
+  border-color: var(--color-rule);
+}
+
+/* n < 50：右端虛線，視覺上宣告「這是 max 不是 p98」 */
+.rep-bar--coarse {
+  border-inline-end: 2px dashed var(--color-accent);
+}
+
+.rep-seg {
+  width: calc(var(--pct) * 1%);
+  border-inline-end: var(--rule-hair) solid var(--color-rule);
+}
+
+.rep-seg:last-child {
+  border-inline-end: 0;
+}
+
+.rep-seg--a {
+  background: var(--rep-seg-a);
+}
+
+.rep-seg--b {
+  background: var(--rep-seg-b);
+}
+
+.rep-seg--culprit {
+  background: var(--color-accent);
+}
+
+/* 段是 0 時不讓它消失 —— 消失的話讀者分不出「這段是 0」與「這段沒量到」 */
+.rep-seg--tick {
+  width: 2px;
+  min-width: 2px;
+}
+
+/* duration < 32ms：presentation 落在 8ms 網格上。斜線紋是一次 paint 的靜態
+   gradient，不用 SVG pattern、不用背景圖、不用動畫 */
+.rep-seg--quantized {
+  background-image: repeating-linear-gradient(45deg, transparent 0 3px, var(--color-paper) 3px 4px);
+}
+
+/* legend 永遠看得到，不用 title 屬性（原生 tooltip 是滑鼠才有的資訊，等於沒有） */
+.rep-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15ch, 1fr));
+  gap: var(--space-xs) var(--space-md);
+  margin: 0;
+}
+
+.rep-legend dt {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.rep-legend dd {
+  margin: 0;
+  font-family: var(--font-mono);
+}
+
+.rep-legend__row {
+  min-width: 0;
+}
+
+.rep-legend .rep-legend__row--culprit dt,
+.rep-legend .rep-legend__row--culprit dd {
+  color: var(--color-accent);
+}
+
+/* ─────────── 載入期指標 / LoAF 的數值列 ─────────── */
+
+.rep-rows {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  gap: var(--space-2xs) var(--space-md);
+  margin: 0;
+}
+
+.rep-rows dt {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.rep-rows dd {
+  margin: 0;
+  min-width: 0;
+}
+
+/* dd 裡的補充說明（LCP 的標的與 renderTime / CLS 的 session window 數）。
+   第一句跟數值同列，後面每一句自己一行 —— 這些是誠實揭露，不是可摺疊的細節 */
+.rep-rows dd p {
+  margin-top: var(--space-2xs);
+}
+
+.rep-val {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* 依 CWV 官方門檻標區間。**只用來標位置，不用來判定好壞** ——
+   本站比的是同一台機器上病變 vs 治療，4x 節流下的絕對值本來就過不了門檻。 */
+.rep-band {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  margin-inline-start: var(--space-xs);
+}
+
+/* ─────────── 清單（top scripts / 最近幾幀 / 診斷訊息） ─────────── */
+
+.rep-list {
+  margin: var(--space-xs) 0 0;
+  padding-inline-start: 1.6em;
+  font-size: var(--text-xs);
+}
+
+.rep-list li {
+  margin-block: var(--space-2xs);
+}
+
+.rep-list li > span {
+  display: block;
+}
+
+.rep-list--scroll {
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.rep-confession {
+  margin: var(--space-md) 0 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-inline-start: 2px solid var(--color-ink);
+  background: var(--color-paper-2);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.rep-confession b {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+/* ─────────── 歷次 run ─────────── */
+
+/* 表格窄螢幕橫向捲，不縮字。可點擊文字不准斷成兩行的那條 gate 在這裡不適用
+   （表格內沒有連結），但數值欄一律 nowrap，斷行的數字讀起來像兩個數字。 */
+.rep-table-scroll {
+  overflow-x: auto;
+  margin-top: var(--space-sm);
+}
+
+.rep-table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.rep-table th,
+.rep-table td {
+  text-align: start;
+  vertical-align: baseline;
+  padding: var(--space-xs) var(--space-sm) var(--space-xs) 0;
+}
+
+.rep-table thead th {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  border-bottom: var(--rule-hair) solid var(--color-ink);
+}
+
+.rep-table tbody tr {
+  border-bottom: var(--rule-hair) solid var(--color-rule-2);
+}
+
+.rep-table .rep-val,
+.rep-table .num {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* 只有第一欄的 mode 名字帶語意色，數字欄維持墨色 —— accent 稀有才有重量。
+   而且顏色不是唯一訊號：那一格的文字本身就寫著「病變」／「治療」。 */
+.rep-table tr.is-lesion > td:first-child {
+  color: var(--color-accent);
+}
+
+/* 可重現徽章。**只有兩個狀態，沒有「接近」。**
+   「可重現」不上 accent：accent 在這個面板只代表「兇手」與「這個數字有條件」，
+   拿它去表示好消息會把它的意思稀釋掉。確定的狀態用墨色實框，未達標用弱化色。 */
+.rep-badge {
+  display: inline-block;
+  margin-top: var(--space-md);
+  padding: var(--space-2xs) var(--space-sm);
+  border: var(--rule-hair) solid currentColor;
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  color: var(--color-neutral);
+}
+
+.rep-badge--ok {
+  color: var(--color-ink);
+}
+
+/* ─────────── 檢驗限度 ─────────── */
+
+/* 首頁 .caveats 的同一個構件：衡線分隔、無項目符號、標題實、內文弱。
+   誠實標註本身就是教學內容，所以它有自己的區塊，不是小字附註。 */
+.rep-caveats {
+  list-style: none;
+  margin: var(--space-sm) 0 0;
+  padding: 0;
+}
+
+.rep-caveats li {
+  border-top: var(--rule-hair) solid var(--color-rule);
+  padding-block: var(--space-sm);
+}
+
+.rep-caveats li:last-child {
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+}
+
+.rep-caveats b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.rep-caveats span {
+  display: block;
+  margin-top: var(--space-3xs);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+/* ─────────── 原始檢體 ─────────── */
+
+.rep-dump {
+  contain: content;
+  border-top: var(--rule-hair) solid var(--color-rule);
+  padding-top: var(--space-lg);
+}
+
+.rep-dump summary {
+  cursor: pointer;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.rep-dump summary:hover {
+  color: var(--color-accent);
+}
+
+/* ⚠️ 這個 <pre> 必須是整份 document 的**最後一個** <pre>：
+   tools/acceptance.mjs、tools/reproducibility.mjs、tools/b-class-isolation.mjs
+   都用 `[...document.querySelectorAll('pre')].at(-1)` 抓它 parse JSON。
+   在它後面再加任何 <pre> 就會打斷三支工具。收合狀態不影響 textContent。 */
+.rep-dump pre {
+  margin: var(--space-sm) 0 0;
+  max-height: 24rem;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

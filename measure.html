@@ -8,10 +8,18 @@
     <link rel="icon" href="data:," />
     <title>量測台 · 前端效能病理標本館</title>
     <!--
-      這裡沒有任何 <link rel="stylesheet">，是刻意的：
-      面板整個是 <pre> 純文字（spec §5.3）。排版屬於 Phase 3 的 shell-visual 工作線，
-      動它之前要先對照 docs/superpowers/plans/baseline-shell-cost.md 的基線，
-      證明外殼沒有變成污染源。
+      這裡**刻意不手寫** stylesheet 標籤，但這一頁現在確實有樣式：
+      `src/shell/Panel.tsx` 走 `import './panel.css'`，那支檔案在 entry chunk 的
+      import graph 裡，build 會把它抽成獨立 CSS 資產並自動插進 dist 的這個 <head>。
+      手寫一個 <link> 只會多一份要自己維護的路徑。
+      （dev server 是 runtime 注入，時序不同 —— 但 dev 的數字本來就作廢。）
+
+      ⚠️ 樣式只掛在面板根容器 `.rep` 底下，零全域選擇器。
+      量測面是儀器：動它之前先對照 docs/superpowers/plans/baseline-shell-cost.md 的基線
+      （外殼 script 4x median 0.00ms，閘門是漲幅 > 2ms），改完重量一次。
+
+      ⚠️ 零外部請求（spec §4.7）：不准 CDN 字體、不准第三方資源。
+      字體一律系統堆疊 —— 量測站點自己去要外部資源等於把污染源寫進實驗器材。
 
       ⚠️ 2026-07-26：這一頁從 `/` 搬到 `/measure.html`，`/` 現在是首頁／標本索引。
       tools/acceptance.mjs 與 tools/reproducibility.mjs 的 URL_SHELL 必須指到這裡。

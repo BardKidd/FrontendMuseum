@@ -90,7 +90,19 @@ const snap = () => evaluate(`(() => {
   const pres = [...document.querySelectorAll('pre')];
   try { return JSON.parse(pres[pres.length - 1].textContent); } catch { return null; }
 })()`);
-const panelText = () => evaluate(`[...document.querySelectorAll('pre')][0].textContent`);
+/**
+ * 面板算繪出來的文字。
+ *
+ * ⚠️ 讀的是 `.rep`（面板根容器），**不是 `pre[0]`**。
+ * Phase 3 的面板視覺化把散文 `<pre>` 拆成了 DOM，整份 document 只剩最後那個
+ * 原始檢體 JSON 的 `<pre>` —— 拿 `pre[0]` 會抓到 JSON，第 4 條必紅。
+ *
+ * 這一條**刻意繼續讀 UI 而不是讀 snapshot 欄位**。改成
+ * `s1.metrics.inp.isMaxNotP98 === true` 會過，但那是把「UI 有沒有告訴讀者」
+ * 偷換成「資料裡有沒有這個欄位」——而這條驗收存在的理由正是誠實原則：
+ * 限制寫在 UI 上，不寫在心裡（spec §4.2）。
+ */
+const panelText = () => evaluate(`(document.querySelector('.rep') || document.body).innerText`);
 
 // ── 開場 ──────────────────────────────────────────────────────────────
 await S('Page.navigate', { url: URL_SHELL });
