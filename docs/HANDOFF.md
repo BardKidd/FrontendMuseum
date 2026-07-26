@@ -186,5 +186,6 @@ fe4f795  fix(specimens)     四個設計缺陷
 9ecbaf8  fix(tools)         （上一輪）量測工具自身的四個缺陷
 ```
 
-**尚未合併回 `main`** —— `main` 還停在 `0014c92`（Phase 0 baseline）。
-PR：`https://github.com/BardKidd/FrontendMuseum/pull/new/phase1-2/specimens-and-measure`
+~~尚未合併回 `main`~~ **已於 2026-07-26 併回 `main`**（PR #2，merge commit `3760907`，
+含到 `cc72e39` 為止的全部工作：面板修正、判準定案、六份病理報告）。
+**之後直接在 `main` 開發、直接推**，不再開分支；`phase1-2/specimens-and-measure` 保留作歷史。
