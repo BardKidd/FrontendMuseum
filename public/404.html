@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-Hant">
+<!--
+  這個檔案的存在本身就是功能：Cloudflare Pages 在輸出目錄沒有 404.html 時
+  會自動啟用 SPA fallback（未命中路徑一律回 index，HTTP 200）——
+  對這個 MPA 站那是災難：/measure.html 與 specimens/*.html 都靠真實路徑活著，
+  而且「假裝每個路徑都存在」違反誠實原則。放了這個檔案，未命中就老實回 404。
+  部署驗收會打一個亂編的路徑斷言 404（見 docs/HANDOFF.md 部署一節）。
+  零外部請求（spec §4.7）：本頁不載入任何資源。
+-->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>404 · 前端效能病理標本館</title>
+<style>
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-content: center;
+    background: oklch(96% 0.012 85); color: oklch(25% 0.02 60);
+    font-family: ui-serif, "Noto Serif TC", serif; text-align: center; padding: 2rem;
+  }
+  h1 { font-size: 3rem; margin: 0 0 0.5rem; color: oklch(45% 0.145 28); }
+  p { margin: 0.25rem 0; font-family: ui-sans-serif, system-ui, sans-serif; }
+  a { color: oklch(45% 0.145 28); }
+  small { color: oklch(50% 0.02 60); }
+</style>
+</head>
+<body>
+<div>
+  <h1>404</h1>
+  <p>這個路徑不在館藏裡。</p>
+  <p><a href="/">回標本索引</a> · <a href="/measure.html">量測台</a></p>
+  <p><small>這一頁誠實地回了 404 —— 假裝每個路徑都存在的站，量出來的東西也別信。</small></p>
+</div>
+</body>
+</html>
