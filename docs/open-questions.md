@@ -190,16 +190,16 @@
 
 | # | 項目 | 狀況 | 驗證 | 處置 |
 |---|---|---|---|---|
-| 30 | **A 類標本的 CLS 欄是跨 mode 累積殘留** | collector 切 mode 不重設：#3 治療臂三筆 `cls.value` 與 broken run2/3 **逐位元相同**（0.4252…）、`sessionCount` 跨輪跨 mode 10→65 一路疊；#6 串流期間 `sessionCount` 1→23 自產位移窗（`cls.value` 不變，疑狀態列改寫）。A 類四支全部中招 | **實測**（#3、#6 逐筆） | ⏳ 待處置：下一輪擇一 —— 切 mode 重設 CLS collector（動儀器，要重量），或明文登記「A 類的 CLS 欄不可用」。#3 / #6 報告已各自加「不得引用」警語 |
-| 31 | **#2 副標「捲動掉幀」被實測反向** | `src/specimens.ts:205` 與 `specimens/02-long-list.ts:4` 宣稱病變捲動掉幀，實測 broken `droppedFramesPeak` 0×3；唯一超過 5 幀底線的是**治療臂** fixed-virtual（9/9/10，穩定），且此代價無任何登記。結構性原因：掉幀觀測 `mount()` 後才啟動（`runtime.ts:444-460`），病變的初次渲染在窗外 | **實測** | ⏳ 待裁決：改文案（副標是 metadata 不是凍結變因）或補載入期掉幀觀測（動儀器）。fixed-virtual 的掉幀代價已寫進 #2 報告治療梯度的代價欄 |
-| 32 | **#4 broken run1 的離群 LoAF 幀** | `forcedPeak` 548.7ms、`specimenScript` 610.1ms、`forcedFn` **空字串**、量級是同臂其他輪（2.8~2.9ms）的 ~190 倍，主指標卻與 run2 同帶 —— 疑進臂／首載殘留幀停在六幀緩衝內被選中，與 `phase2:549-551` 記過的選幀缺陷同型（該缺陷宣稱已修） | **實測** | ⏳ 待處置：下一輪考慮進臂後清 LoAF 緩衝；#4 報告已標注該筆不作歸因引用 |
-| 33 | **`forcedPeak` 三態編碼無文件** | 數值＝有樣本的峰值；`0`＝無樣本、備援幀實量的 forced 貢獻；`null`＝連備援幀都沒有（`tools/reproducibility.mjs:438`）。三種語意，易把 0 誤讀成「量到零」 | **實測** | ⏳ 待處置：`reproducibility.mjs` 該處補註解；#3 / #4 報告已加警語 |
-| 34 | **`protocolVersion` 與 viewport 不在 JSON 裡** | 簡報與摘要包都以為 records 帶這兩欄，實際正典 JSON 全檔皆無 —— 「JSON 的 protocolVersion 必須等於契約常數」這條驗證從未可執行 | **實測**（grep 零筆） | ⏳ 待處置：下一輪 `capture()` 補欄位（加欄位不改語意）。六份報告一律標「取自程式碼，非量測實錄」 |
+| 30 | **A 類標本的 CLS 欄是跨 mode 累積殘留** | collector 切 mode 不重設：#3 治療臂三筆 `cls.value` 與 broken run2/3 **逐位元相同**（0.4252…）、`sessionCount` 跨輪跨 mode 10→65 一路疊；#6 串流期間 `sessionCount` 1→23 自產位移窗（`cls.value` 不變，疑狀態列改寫）。A 類四支全部中招 | **實測**（#3、#6 逐筆） | ✅ **已處置**（2026-07-26 晚）：不動 collector —— reset 不清累計是 `vitals.ts` 登記過的刻意設計（清掉得到假 0）。改資料面明文標記：records 加 `clsScope` 欄（A 類 `document-cumulative` 不得歸單臂、B 類 `navigation`）→ `phase2` 修正紀錄「儀器修正五條」 |
+| 31 | **#2 副標「捲動掉幀」被實測反向** | `src/specimens.ts:205` 與 `specimens/02-long-list.ts:4` 宣稱病變捲動掉幀，實測 broken `droppedFramesPeak` 0×3；唯一超過 5 幀底線的是**治療臂** fixed-virtual（9/9/10，穩定），且此代價無任何登記。結構性原因：掉幀觀測 `mount()` 後才啟動（`runtime.ts:444-460`），病變的初次渲染在窗外 | **實測** | ✅ **已裁決**（2026-07-26 晚）：改文案 —— 副標與標本檔頭撤下「捲動掉幀」（不觀測就不宣稱；要掛回去先補載入期觀測）。fixed-virtual 的掉幀代價已在 #2 報告代價欄 |
+| 32 | **#4 broken run1 的離群 LoAF 幀** | `forcedPeak` 548.7ms、`specimenScript` 610.1ms、`forcedFn` **空字串**、量級是同臂其他輪（2.8~2.9ms）的 ~190 倍，主指標卻與 run2 同帶 —— 疑進臂／首載殘留幀停在六幀緩衝內被選中，與 `phase2:549-551` 記過的選幀缺陷同型（該缺陷宣稱已修） | **實測** | ✅ **已處置**（2026-07-26 晚）：驅動器在每個 mode 的 run1 前先按一次「重跑」補齊窗重開（根因：切 mode 開新窗發生在進臂重建之前）。煙測驗證：#4 broken run1 forcedPeak 548.7 → 2.3ms |
+| 33 | **`forcedPeak` 三態編碼無文件** | 數值＝有樣本的峰值；`0`＝無樣本、備援幀實量的 forced 貢獻；`null`＝連備援幀都沒有（`tools/reproducibility.mjs:438`）。三種語意，易把 0 誤讀成「量到零」 | **實測** | ✅ **已處置**（2026-07-26 晚）：`capture()` 原地補三態文件 |
+| 34 | **`protocolVersion` 與 viewport 不在 JSON 裡** | 簡報與摘要包都以為 records 帶這兩欄，實際正典 JSON 全檔皆無 —— 「JSON 的 protocolVersion 必須等於契約常數」這條驗證從未可執行 | **實測**（grep 零筆） | ✅ **已處置**（2026-07-26 晚）：`capture()` 從快照抄進 `protocolVersion` / `viewport`（快照裡本來就有，先前漏抄）。煙測驗證兩欄皆實錄 |
 | 35 | **`specimens/05-layout-shift.ts` 檔尾 LCP 註解過期** | 寫於拆臂前：「fixed-* → img#ls-figure」對 fixed-image 不成立（實錄 `div#ls-prose` 76~84ms）；「約 120~145ms」是不標 session 的絕對值 | **實測** | ✅ 已修（2026-07-26 晚）：註解改為逐臂實錄＋標明 bpp 反推只對預留全開的臂成立；fixed-image 為何不是圖片**未反推**，註解照實寫「僅實錄」 |
 | 36 | **#4 wheel latching 預測未出現** | `04.ts:96-98` 預期 burst 第 2、3 格不可取消，實測 broken 三輪 `wheelCancelableCount` 皆等於 `wheelEvents`（21/21、20/20、20/20）。判準「> 0」未被咬到 | **實測** | 📝 記錄。註解的預測與實測不符，但屬「登記的風險沒發生」—— 下一輪重驗，若再不出現就更正註解 |
 | 37 | **`phase2:1126` 裁決紀錄標錯標本編號** | 「#5 的風險 R2」內容全屬 #2（`:228-230` 在 #2 段內、`:188` 是 #2 的登記）。#2、#5 兩個 agent 獨立指認 | **實測**（對照原文） | ✅ 已修：原地更正並附更正說明 |
 | 38 | **#6 主指標欄位漂移漏記** | `:1109` 的表記了 #4 的同型漂移，#6 的漏了 | **實測** | ✅ 已裁決：`phase2` 補充裁決第 1 條，追記現行有效值 `droppedFramesPeak` |
 | 39 | **上午 session 的敘事振幅在正典資料上縮水** | `phase2:885-896`「passive:false 擋捲動、scroll 少發（34 vs 40）」在正典 JSON 只剩 20/20/18 vs 20/21/21 —— 機制的**振幅**也是機器狀態的函數 | **實測** | 📝 記錄。敘事引用該段時必須標 session；不改原文（它對它那份資料為真） |
 
-**還開著的**：30（A 類 CLS 處置）、31（#2 副標）、32（LoAF 進臂殘留）、33、34（工具補欄）。
-30~34 全是**儀器面**，不擋報告發表 —— 六份報告都已就地加警語。36、39 是記錄性質。
+**十一節全數處置完畢**（2026-07-26 晚，`phase2` 修正紀錄「儀器修正五條 + 掃描前登記」）。
+順帶新增負載問責：preflight load ≥ 2 拒跑、每筆 record 帶 `loadAvg1m`。36、39 維持記錄性質。

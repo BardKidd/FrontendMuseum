@@ -202,7 +202,13 @@ export const LONG_LIST_META: SpecimenMeta = {
   id: '02-long-list',
   order: 2,
   title: '長列表未虛擬化',
-  subtitle: '一次渲染 5000 筆裝置狀態，約 40,000 個 DOM 節點 —— LCP 被拖垮，捲動掉幀',
+  /**
+   * 2026-07-26 撤下「捲動掉幀」：正典掃描 broken 的 droppedFramesPeak 三輪皆 0 ——
+   * 掉幀觀測在 mount 之後才啟動，載入期的卡頓落在觀測窗外，這個宣稱現行儀器量不到；
+   * 反而是 fixed-virtual 捲動期穩定掉 9~10 幀（open-questions 十一.31）。
+   * 不觀測就不宣稱。要重新掛回這四個字，先補載入期掉幀觀測。
+   */
+  subtitle: '一次渲染 5000 筆裝置狀態，約 40,000 個 DOM 節點 —— LCP 被拖垮',
 
   class: 'B',
   switchKind: 'reload',

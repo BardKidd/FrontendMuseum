@@ -454,3 +454,27 @@ inputDelay / presentation / inputDelay。這一臂的數字**本輪不得單獨�
 
 **方法論段要寫進去**：本站的可比較單位是「同一份 JSON 內部的臂間比值」，
 不是「跨 JSON 的絕對毫秒數」。已發出文章引用的絕對值只在它自己那份原始資料的脈絡下成立。
+
+## 修正紀錄 · 標本 #1 兇手改判為「交界標本」（2026-07-26 晚）
+
+`docs/HANDOFF.md` 接手須知第 6 條留待本輪的裁決，現在裁：
+
+**兩個獨立 session 的證據**（工作量與程式一字未動）：
+- 較慢的機器狀態（0726 上午）：broken 三輪兇手一致 **presentation**。
+- 較快的機器狀態（0726 下午 `-5.json` 與晚間 `-6.json`）：兩輪都是
+  **presentation / inputDelay / inputDelay** —— 同一支標本，兇手隨機器速度在兩段之間翻。
+
+**機制**（已在第二篇文章與 `-5.json` 輪記錄過）：排隊的點擊之間塞得進一次 paint 時，
+排隊時間從 presentation 浮出來變成 inputDelay；塞不進去就整段掛在 presentation。
+質量在兩段之間整塊搬家（本輪 run1：presentation 951 / inputDelay 0.8；
+run2：presentation 120 / inputDelay 798），不是雜訊抖動。
+
+**裁決**：
+1. 登記值 `culprit: 'presentation'` **不改**（規矩 2），但登記明文例外：
+   **#1 是交界標本，「三輪兇手一致」判準對它結構性不適用** ——
+   它的兇手是機器速度的函數，不是標本的性質。
+2. #1 的兇手宣稱改用**合成判準**：代表互動的 `inputDelay + presentation` 合計
+   必須壓倒 `processing`（本輪三輪皆成立：合計 918~952ms 對 processing 百 ms 級）。
+   這才是這支標本真正教的事：**INP 看不看得見排隊，取決於排隊期間有沒有 paint 機會** ——
+   交界本身就是展品，不是要修掉的缺陷。
+3. 分析器對 #1 的「⚠不一致」警示**保留不消**：讀者應該看到它翻，然後被指到這一條。

@@ -18,7 +18,18 @@
  *     它負責把 '4x' 寫進 RunConditions。只做前者的話數字是 4x 但條件記成 unknown。
  */
 import { spawn } from 'node:child_process';
-import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
+
+/**
+ * 機器負載（1 分鐘 load average）。寫進每一筆 record 與掃描檔頭，
+ * 讓「這一輪的數字是機器還是標本」可以事後問責，不用猜 ——
+ * 2026-07-26 那組 granular 85/59/84 vs 14/18/18 的裁決花掉的力氣，就是這個欄位的理由。
+ * 讀不到（非 Linux）回 null，不是 0：0 會被讀成「量到了而且很閒」。
+ */
+function loadAvg1m() {
+  try { return Number(readFileSync('/proc/loadavg', 'utf8').split(' ')[0]); }
+  catch { return null; }
+}
 
 const CHROME = '/opt/brave.com/brave/brave';
 const PORT = 9335;
@@ -435,6 +446,14 @@ function capture(s, forcedSamples) {
     /** 逐次樣本。跨輪比較用 median，peak 只拿來看離群 */
     forcedSamples: fs,
     forcedMedian: median(fs),
+    /**
+     * ⚠️ 三態欄位，三種語意不可混讀（open-questions 十一.33）：
+     *   數值   —— 有逐點擊樣本，取其峰值
+     *   0      —— 無逐點擊樣本，落回備援幀（loafPickedBy = specimenScriptDuration）
+     *             實際量到的強制版面貢獻，0 是量到的值不是「沒量」
+     *   null   —— 連備援幀都沒有（loafPickedBy = none）
+     * 引用時必須同時看 forcedSamples.length 與 loafPickedBy。
+     */
     forcedPeak: fs.length ? Math.max(...fs) : (lf.forced ?? null),
     forcedFn: lf.fn,
     /** 'forcedStyleAndLayout' | 'specimenScriptDuration' | 'none'。
@@ -449,6 +468,10 @@ function capture(s, forcedSamples) {
     cpuThrottle: s?.conditions?.device?.cpuThrottle ?? null,
     refreshHz: s?.conditions?.device?.refreshHz ?? null,
     buildId: s?.conditions?.buildId ?? null,
+    // 快照裡一直都有，capture 先前沒抄 —— 六份報告只能標「取自程式碼，非量測實錄」
+    // （open-questions 十一.34）。從頁面實錄，不從驅動器的常數假設。
+    protocolVersion: s?.protocolVersion ?? s?.conditions?.protocolVersion ?? null,
+    viewport: s?.conditions?.viewport ?? null,
   };
 }
 
@@ -620,6 +643,19 @@ async function measureSpecimen(spec) {
         await sleep(1500); // 過 warmup（500ms）再留餘裕
       }
       for (let r = 1; r <= RUNS; r++) {
+        /*
+         * run1 前先按一次「重跑」，把進臂殘留幀丟掉。
+         *
+         * 切 mode（與換標本）會開新的 run 窗，但 mode-entry 的 DOM 重建發生在
+         * 新窗開了**之後** —— 那一幀會落進 run1 的 LoAF 緩衝。實錄：正典 -5.json 的
+         * #4 broken run1 有一幀 specimenScript 610ms、forcedFn 空字串的殘留幀
+         * （open-questions 十一.32），run2/3 因為前面有輪末的「重跑」而乾淨。
+         * 這裡補上 run1 缺的那一次。host:reset 的安全性由 run2/3 的既有資料證明。
+         */
+        if (r === 1) {
+          await clickShell('重跑', `${spec.id}/${m.id} run1 前丟棄進臂殘留幀`);
+          await sleep(1200);
+        }
         lastDispatchSpanMs = null;
         const forcedSamples = await runProtocol(spec);
         if (spec.inpBased) {
@@ -665,6 +701,14 @@ async function measureSpecimen(spec) {
           dispatchSpanNominalMs: spec.intervalMs === null ? null
             : (spec.absoluteClick ? (spec.reps - 1) : spec.reps) * spec.intervalMs,
           stats: finished ? finished.stats : null,
+          /*
+           * A 類的 cls 欄是**這份 document 從載入起的累計值**，不是這一臂的
+           * （ClsCollector.reset() 依 vitals.ts 的登記理由刻意不清累計；
+           * open-questions 十一.30 的裁決：不動 collector，資料面明文標記）。
+           * 分析與報告一律不得把它歸給單一 mode。
+           */
+          clsScope: 'document-cumulative',
+          loadAvg1m: loadAvg1m(),
         });
         log(`   ${m.id} #${r}  ${fmt(spec, c, finished)}`);
       }
@@ -745,7 +789,12 @@ async function measureSpecimen(spec) {
         if (c.cpuThrottle !== THROTTLE_LABEL) {
           problems.push(`${spec.id}/${m.id} 第 ${r} 輪宣告的 cpuThrottle=${c.cpuThrottle}，預期 ${THROTTLE_LABEL}`);
         }
-        records.push({ specimenId: spec.id, mode: m.id, run: r, ...c, stats: null });
+        records.push({
+          specimenId: spec.id, mode: m.id, run: r, ...c, stats: null,
+          // B 類每筆樣本都是全新導覽 —— cls / lcp 真的屬於這一臂這一輪
+          clsScope: 'navigation',
+          loadAvg1m: loadAvg1m(),
+        });
         log(`   ${m.id} #${r}  ${fmt(spec, c, null)}`);
       }
     }
@@ -781,6 +830,21 @@ if (PROBE_INTERVAL !== null) {
 log(`宣告 CPU throttle ${THROTTLE_LABEL}（Emulation.setCPUThrottlingRate rate=${THROTTLE_RATE}）`);
 log(`目標：${targets.map((t) => t.id).join(', ')}`);
 
+/*
+ * Preflight：load ≥ 2 拒跑。
+ * 依據是本機自己的實測：驗收 load < 2 時 13/13，3.7~5.8 掉到 8~11；
+ * 未飽和治療臂的絕對值是機器速度的函數（granular 同日 85/59/84 → 14/18/18）。
+ * 高負載下跑出來的掃描分不清「判準落空」與「機器害的」，等於白跑。
+ * 明知故犯的探針用 ALLOW_HIGH_LOAD=1 放行 —— 跑出來的檔案照樣帶 load 欄，賴不掉。
+ */
+const loadAtStart = loadAvg1m();
+if (loadAtStart !== null && loadAtStart >= 2 && !process.env.ALLOW_HIGH_LOAD) {
+  log(`‼ load ${loadAtStart} ≥ 2，拒跑（機器不安靜時的數字不可用）。`);
+  log(`  等 load < 2 再跑，或明知故犯：ALLOW_HIGH_LOAD=1 node tools/reproducibility.mjs`);
+  process.exit(1);
+}
+log(`load(1m) 開跑時 ${loadAtStart ?? '（非 Linux，量不到）'}`);
+
 const startedAt = Date.now();
 for (const spec of targets) {
   try {
@@ -803,6 +867,9 @@ writeFileSync(OUT, JSON.stringify({
   // 它就不是完整資料集 —— 寫進檔案，不要靠讀者記得自己下過什麼參數
   specimensCovered: [...new Set(records.map((r) => r.specimenId))],
   isFullSweep: only.length === 0,
+  // 開跑與收尾的機器負載（1 分鐘 load average）。逐輪值在各 record 的 loadAvg1m
+  loadAvg1mAtStart: loadAtStart,
+  loadAvg1mAtEnd: loadAvg1m(),
   records,
   problems,
   consoleErrors: [...new Set(consoleErrors)],
