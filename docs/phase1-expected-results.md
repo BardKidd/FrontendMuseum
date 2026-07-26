@@ -261,3 +261,196 @@ spec 對它的定位（`spec:1067`）：「**這是整套最值得寫的一個**
   只是從 script 內移到瀏覽器的正常繪製步驟（記在 `styleAndLayoutDuration` 不是
   `forcedStyleAndLayoutDuration`）。**省下來的是 799 次多餘結算，不是那一次必要的結算** ——
   文章照這個講，講成「讀寫分離讓版面計算消失」就是誇大
+
+---
+
+## 修正紀錄 · 標本 #1 重新設計（2026-07-26）
+
+三輪量測驗證出來的兩個設計缺陷，都不是「量到不符預期」，是**登記值被實測否證**。
+上面的原始預期一個字都不動。
+
+### 一、兇手登記值從 `inputDelay` 改成 `presentation`
+
+**這不是改結論去迎合實測。** 2026-07-25 的三輪原始資料
+（`docs/measurements/2026-07-25-reproducibility-4x.json`）裡 `broken` 的 INP 拆解是：
+
+| 輪 | inputDelay | processing | presentation | INP |
+|---|---|---|---|---|
+| 1 | 1.8ms | 135.5ms | 1230.7ms | 1368ms |
+| 2 | 1.4ms | 134.8ms | 1239.8ms | 1376ms |
+| 3 | 1.2ms | 143.1ms | 1119.7ms | 1264ms |
+
+**三輪一致 —— 一致地是 `presentation`。** §1 原則 4 第 2 條（三輪兇手一致）當時判「通過」，
+因為它只檢查三輪彼此一致，沒有檢查是否等於登記值。這條判準的漏洞一併記在這裡。
+
+**而且這是結構性的，換任何間隔都改不掉。** 對同步阻塞 handler 只有兩種區間，中間沒有縫：
+
+- `I ≥ S`（S = 單次排序成本）⇒ 事件完全不排隊，兇手是 `processing`，標本退化成標本 #3 的複製品。
+  探針實測：人手速度 150ms 一下 ⇒ INP 120ms、兇手 `processing`。
+- `I < S` ⇒ 事件排隊，但十個 handler 連續跑完才輪到一次 paint，**每一發都結束在同一次 paint**。
+  `duration_k = T_paint − start_k`，最早開始的那一發 duration 最大
+  ⇒ **INP 的代表樣本恆為第一發**，而它前面沒有隊可排 ⇒ `inputDelay ≈ 0`，兇手是 `presentation`。
+
+所以「排隊」這件事 INP 結構上看不見，不是因為間隔沒調對，
+**是因為 INP 取的是最差的「單筆」互動，而排隊的代價落在其他筆身上。**
+這正是這個標本現在真正的教學點，也是第二篇文章的骨架。
+
+排隊那條階梯改由標本自報的 `inputLagMaxMs`（handler 進入時刻 − 事件產生時刻）呈現 ——
+它不經過 INP 的取樣規則。斜率有算式：`inputDelay_k ≈ (k−1) × (S − I)`。
+
+**與標本 #3 的對照改寫成**：同樣是主執行緒被佔住，
+#1 的代價落在 `presentation`（畫面遲遲不更新），#3 落在 `processing`（handler 自己慢）。
+對照仍然成立，只是換了一組指標，而且比原本那組更精確 ——
+原本那組從來沒有被任何一次量測支持過。
+
+`primaryMetric` 同步從 `inp.inputDelay` 改成 `inp.presentation`，
+`inp.inputDelay` 降為 secondary（它要留著，因為「它幾乎是 0」正是證據本身）。
+
+### 二、`protocol.intervalMs` 從 `null` 改成 17ms 的絕對排程機器節拍
+
+`null`（盡快連續）不是一個值，是「驅動器有多快就多快」——
+沒有人宣告、沒有人量、換台機器複製不出來。已發出文章 §六（二）記錄過兩種驅動法
+都錯在相反方向，那一節的結論在這裡落實成一個具體的值。
+
+三條邊界（完整推導在 `specimens/01-main-thread-block.ts` 檔頭）：
+
+| 邊界 | 值 | 理由 |
+|---|---|---|
+| 上界 | `I < S` | 否則不排隊。**綁住上界的是 1x 的 S ≈ 25ms**，不是 4x 的 120ms —— `tools/acceptance.mjs` 跑在 1x |
+| 下界 | `I ≥ 16.67ms`（一個 60Hz 幀） | 比一幀還快的節拍，平台不可能替每一發分別呈現一次回應，量到的是驅動器不是頁面。契約的 `intervalMs` 是整數 ⇒ **向上**取 17；取 16 會讓自己宣告的下界不成立，且會與 `MEASURE_CONFIG.eventDurationThreshold = 16` 撞成同一個數字（兩者毫無關係） |
+| 斜率 | `inputDelay_k ≈ (k−1) × (S − I)` | backlog 每拍成長 `1 − I/S` 份。寫得出算式，不是「手速決定」 |
+
+**派送必須絕對排程**：第 k 發打在 `t0 + k × I`，不是「上一發 ack 之後再等 I」——
+後者的實際節拍是 `S + I`，被主執行緒的忙碌反過來決定。
+驅動器新增 `realClickAbsolute()`（`tools/reproducibility.mjs`），
+並逐輪記錄 `dispatchSpanMs` / `dispatchSpanNominalMs`：名目 153ms，
+兩者差太多代表節拍沒有真的交付，**不記錄的話這種失敗在事後的 JSON 裡查不出來**。
+
+**人手做不到 17ms，而且人手做的是另一個實驗。** 所以 protocol 新增 `machinePaced: true`
+（`src/protocol.ts` 加欄位，不改既有語意），外殼據此**不渲染節拍器** ——
+節拍器的 `setInterval` + 每拍一次 `setState` 會落在待量的那一段裡，
+而這個標本的兇手段現在正是 `presentation`。這是本次修法自己差點引進的混淆變因。
+
+### 三、收斂條件從固定 sleep 改成輪詢標本自報的 `completedSorts`
+
+舊作法 `sleep(1500)` 的餘裕只剩約 600ms（drain 需要最後一發之後約 1.16 秒），
+而**失敗是無聲的**：截斷會記成 `completedSorts 9 / cancelledSorts 0`（護欄看起來乾淨），
+接著下一輪 `reset()` 把那筆 abandoned emit 成非零 `cancelledSorts`，
+被誤診成「混了上一個 mode」。改成輪詢 `custom.completedSorts >= reps`，
+沒收斂就把那一輪記進 `problems` 並標成不可用。
+
+### 四、`workerFirstTransferMs` 含 Worker 開機成本 —— 改在 mount 暖機
+
+`ensureWorker()` 原本在第一次點擊裡才建 Worker，而 `reset()` 刻意 terminate，
+所以「第一筆 transfer」由構造必然包含開機。改成 mount / setMode / reset 時就建好，
+並把 `workerBootMs` 單獨拆出來報。不選「改報 seq === 2」的理由：
+seq 2 排在 seq 1 的排序後面，它的 transfer 含佇列等待，正是要避開的那種污染。
+
+### 五、⚠️ 登記在案的限制：4x 節流沒有套用到 worker 執行緒
+
+`Emulation.setCPUThrottlingRate` 掛在 renderer 的**主執行緒**上，
+dedicated worker 是獨立 target，`Emulation` domain 在它上面通常根本不存在。
+證據在既有資料裡：同一份工作 `broken` 116~122ms、worker 28.4~29.0ms，**比值 4.2 ≈ 節流率**。
+
+**這是一個對治療臂有利的混淆變因**，方向與「切 chunk 的額外 CPU 對治療一不利」相反，
+兩者不會互相抵銷，**不可以合寫成一句「保守方向」**（標本檔 `:277` 原本就是那樣寫的，已改）。
+
+同口徑可以相除的只有 `sortMs(broken)` 與 `workerSerializeMs`（兩者都在主執行緒、同一個節流率）：
+主執行緒付出的成本降到約 44%（2.3×），**不是降到 0**。
+`workerSortMs` 與主執行緒的任何數字不同口徑，不得相除。
+這條限制照 §1 誠實原則印在面板上，不是寫在心裡。
+
+### 作廢清單
+
+**`docs/phase1-expected-results.md`（本檔上方）**
+
+- 「預期值」表的 `broken` INP（兇手 = inputDelay）150~500 / 500~1500ms —— 兇手欄作廢，數值欄改掛 `presentation`
+- 「三個要注意的方向性預測」第 3 條「兇手段必須是 `inputDelay`；若有任何一輪變成 `processing`，§1 原則 4 第 2 條就不通過」—— **整條作廢**（正確的第三種可能是 `presentation`，而它才是實際發生的）
+- 「這個標本最大的可重現性風險」整節 —— 風險本身成真，但處置順序的第 3 步（「最後才動 protocol」）已經執行，該節改為歷史紀錄
+
+**`docs/phase2-expected-results.md`**
+
+- `:435` 表格列（標本 #1 INP median 1368/1376/1264、離散度 8.2%、✅）—— 派送方式已變，三個數字全部作廢
+- `:459-473` 整節「`intervalMs: null` 不是凍結的變因」（含三種驅動法對照表）—— 結論仍成立，但數字作廢
+- `:475-481` 整節「兩段治療都只做了十分之一的工作」（含 `workerTransferMs` 589.7ms 與「搬運比排序貴 20 倍」）—— **該讀法本身是錯的**，見上面第五節的同口徑問題
+
+**已發出文章 `docs/articles/01-twelve-treatments-four-survive.md`（不改文章，只標明失效）**
+
+- §六（二）的 INP median 124ms / 1368ms 兩組數字：派送方式已變，兩者都不再可複製
+- §六（二）「兩種機器驅動法都錯，而且錯在相反方向」—— 方向的描述正確，但它暗示中間存在一個能讓 `inputDelay` 現形的間隔，**那個間隔不存在**（見本節第一項）
+- §四之二 的衍生數字，以及護欄計數器清單裡沒有 `completedSorts` / `cancelledSorts`
+- `fixed-yield` 的 `custom.droppedFrames` 2/2/3 —— drain 拉長到 1.3 秒後量級改變
+- 上報的 `sortMs` 指涉物變了：從「唯一跑完的那一筆」變成「第十筆」
+- `fixed-worker` 的 INP 576ms 與 2.375× 預估：那一臂現在在同一個窗裡多付九次 `renderSummary` / emit / status 寫入，而 `presentation` 正是它 576ms 裡的 514ms
+
+### 尚未有裁決的問題
+
+1. 4x 節流套不到 worker 這件事，是「登記成明文例外」（目前作法）還是「治療二改成同口徑的另一種實作」。
+2. 本節所有新登記預期值**都是推導值，還沒量過一次**。重跑三輪之後若不符，
+   照 §1 原則 4 修變因不修結論，並在此追加。
+
+---
+
+## 實測結果 · 標本 #1 重新設計後的三輪（2026-07-26）
+
+原始資料 `docs/measurements/2026-07-26-reproducibility-4x.json`。宣告 4x、CDP 絕對排程。
+
+| mode | 三輪 INP median | 離散度 | 判定 | 兇手 | 比值 |
+|---|---|---|---|---|---|
+| `broken` | 1472 / 1508 / 1672 | 13.3% | ✅ | **presentation ×3** | —— |
+| `fixed-yield` | 24 / 24 / 24 | 0.0% | ✅ | presentation | 62.8× |
+| `fixed-worker` | 552 / 508 / 496 | 11.0% | ✅ | ⚠ **inputDelay / presentation / inputDelay** | 3.0× |
+
+**節拍護欄**：名目跨距 153ms，實測 152.6 / 153.5 / 154.2 —— 絕對排程確實交付了 17ms。
+
+### 登記的兇手改判得到確認
+
+`broken` 三輪一致是 `presentation`，`inputDelay` 三輪都是個位數 ms。
+**與登記的結構性論證完全相符**：十發點擊共用同一次 paint，代表樣本恆為第一發。
+
+### 意外收穫：`fixed-worker` 反而把排隊顯形了
+
+這是本輪最有價值的一筆。同一個標本裡，兩臂的兇手不同，而**差別正好是結構論證的分界**：
+
+- `broken`：單次 handler 135ms ≫ 間隔 17ms，十個同步 handler 連續跑完中間**沒有 paint**
+  ⇒ 全部結束在同一次 paint ⇒ 最早的那一發 duration 最大 ⇒ 它前面沒有隊 ⇒ 兇手 `presentation`。
+- `fixed-worker`：主執行緒每發只付約 57ms 的序列化，**中間有 paint**
+  ⇒ 每一發各自結算 ⇒ 後面的發次帶著累積的 backlog ⇒ 兇手 `inputDelay`（實測 427~549ms）。
+
+也就是說：**「INP 看不看得見排隊」不取決於有沒有排隊，取決於排隊期間瀏覽器有沒有機會畫。**
+這比登記時寫的版本更精確，而且是同一支標本內部的對照，不需要跨標本論證。
+
+**連帶推翻一個直覺**：治療二買到的不是「沒有排隊」。
+它把每發的主執行緒成本從 135ms 降到 57ms，但 57 仍然大於 17 —— **佇列照樣堆**，
+只是堆得慢，而且因為中途會畫，那些延遲反而變得看得見。
+
+### ⚠️ `fixed-worker` 沒有通過 §1 原則 4 第 2 條（三輪兇手一致）
+
+inputDelay / presentation / inputDelay。這一臂的數字**本輪不得單獨發表**。
+不是量測抖動：它落在兩種機制的交界上（57ms 的序列化與 17ms 的間隔比值只有 3.4，
+而 `broken` 是 8），哪一發成為代表樣本因此對時序敏感。
+
+處置順序（修變因不修結論）：
+① 先確認不是背景負載 ②（若要保留這一臂）把序列化成本或間隔往兩邊拉開，讓機制不再交界
+③ 最後才考慮把這一臂的主指標從 INP 換成標本自報的 `inputLagMaxMs`。
+**本輪不動，留待裁決。**
+
+### 實測不符登記的部分
+
+本節所有登記值都是推導值。實測之後：
+
+- `broken` 的 INP 從舊派送法的 1368 / 1376 / 1264 變成 1472 / 1508 / 1672 —— 同量級，
+  但**跨 session 的絕對值不可比**（見下），只有同一份 JSON 內部的比值可比。
+- 登記沒有預測 `fixed-worker` 會出現 400~550ms 的 `inputDelay`。這是新現象，已在上面登記成新事實。
+
+### ⚠️ 跨 session 的絕對值不可比 —— 本輪出現硬證據
+
+標本 #3 本輪一個字都沒改，forced median 卻從上一輪的 745 / 716 / 678
+變成 1158 / 1274 / 1376（約兩倍），而它自己的三輪離散度只有 17.1%（判定通過）。
+
+也就是說：**同一份程式、同一個判準，跨 session 的絕對值差兩倍，session 內部卻很穩。**
+這與本檔早就登記過的「錨點 B 機器相依性極高，換機器要先重跑按鈕 B 重新校準」是同一件事，
+但這次是同一台機器、同一天、相隔數小時。
+
+**方法論段要寫進去**：本站的可比較單位是「同一份 JSON 內部的臂間比值」，
+不是「跨 JSON 的絕對毫秒數」。已發出文章引用的絕對值只在它自己那份原始資料的脈絡下成立。
