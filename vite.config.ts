@@ -57,6 +57,10 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: resolve(root, 'index.html'),
+        // 首頁／標本索引。**不在量測路徑上** —— 它不載入外殼、不掛任何 observer，
+        // 所以它有 CSS 不違反「量測站點不准替自己引進污染源」那條紀律。
+        // 樣式整段內嵌在 home.html 裡，零額外請求（tokens.css 只是可攜的匯出副本）。
+        home: resolve(root, 'home.html'),
         ...specimenEntries(),
       },
       output: {

@@ -1,0 +1,87 @@
+/* Hallmark · tokens · theme: Almanac · genre: editorial
+ * anchor hue: 28 (oxidised oxblood) · axes: light / roman-serif / warm
+ *
+ * 這份是可攜的 token 匯出。實際樣式內嵌在 home.html 的 <style> 裡 ——
+ * 本專案禁止量測路徑上出現任何額外請求（spec §4.7），首頁沿用同一條紀律。
+ * 要把這套系統帶到別的頁面（例如 Phase 3 的面板視覺）時 import 這個檔。
+ */
+:root {
+  /* ── colour ── 一個 accent，佔比不超過視窗的 3% */
+  --color-paper:    oklch(97%   0.008 80);
+  --color-paper-2:  oklch(94.5% 0.011 78);
+  --color-rule:     oklch(84%   0.010 70);
+  --color-rule-2:   oklch(90%   0.008 74);
+  --color-neutral:  oklch(58%   0.009 60);
+  --color-muted:    oklch(43%   0.009 55);
+  --color-ink:      oklch(21%   0.011 45);
+  --color-accent:   oklch(45%   0.145 28);
+  --color-focus:    oklch(52%   0.170 28);
+
+  /* ── type ── 2+1：display 襯線 + body 無襯線 + mono outlier
+       outlier 只承載一個角色：**量到的值與機器產生的字串**
+       （主數字、統計條、索引表數值欄、行內程式碼、版權頁的量測條件）。
+       散文、標題、導覽、報頭一律不用它 ——
+       一旦它出現在第三種語意上，它就不是 outlier 而是第三套內文字體。
+       字體目錄刻意繞過 Google Fonts / Fontshare —— 外部請求會污染量測，
+       而中日韓網頁字體是 5–15MB 等級。 */
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Source Han Serif TC",
+                  "Noto Serif CJK TC", "Songti TC", ui-serif, serif;
+  --font-body:    "PingFang TC", "Source Han Sans TC", "Noto Sans CJK TC",
+                  "Microsoft JhengHei", ui-sans-serif, sans-serif;
+  --font-mono:    ui-monospace, "SF Mono", "JetBrains Mono", "IBM Plex Mono", monospace;
+
+  /* ── scale ── perfect fourth, 1.333 */
+  --text-xs:        0.75rem;
+  --text-sm:        0.875rem;
+  --text-base:      1rem;
+  --text-lg:        1.333rem;
+  --text-xl:        1.777rem;
+  --text-2xl:       2.369rem;
+  --text-3xl:       3.157rem;
+  --text-display-s: clamp(2.6rem, 6vw, 4.2rem);
+
+  /* ── space ── 4pt base, 名字取角色不取尺寸 */
+  --space-3xs: 0.125rem;
+  --space-2xs: 0.25rem;
+  --space-xs:  0.5rem;
+  --space-sm:  0.75rem;
+  --space-md:  1rem;
+  --space-lg:  1.5rem;
+  --space-xl:  2.5rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6rem;
+  --space-4xl: 9rem;
+
+  /* ── rule / gutter / measure ── */
+  --rule-hair:   1px;
+  --page-gutter: clamp(1.25rem, 5vw, 4.5rem);
+  --measure:     62ch;
+
+  /* ── motion ── 只動 transform 與 opacity */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:     cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long:  420ms;
+
+  /* ── z ── 具名六階，不要臨時填數字 */
+  --z-base:   1;
+  --z-raised: 10;
+  --z-sticky: 200;
+}
+
+/* 深色：不換 anchor hue，只動 lightness 與 chroma */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper:   oklch(15% 0.012 45);
+    --color-paper-2: oklch(19% 0.013 45);
+    --color-rule:    oklch(32% 0.010 50);
+    --color-rule-2:  oklch(25% 0.010 48);
+    --color-neutral: oklch(60% 0.009 60);
+    --color-muted:   oklch(73% 0.008 65);
+    --color-ink:     oklch(93% 0.007 80);
+    --color-accent:  oklch(70% 0.125 32);
+    --color-focus:   oklch(74% 0.150 32);
+  }
+}
