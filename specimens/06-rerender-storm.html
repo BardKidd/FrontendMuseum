@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <title>標本 #6 re-render 風暴 · 前端效能病理標本館</title>
+    <!--
+      沒有 stylesheet：面板 CSS 延後到 Phase 3。
+      這一頁的樣式只有清單的列高與欄寬 —— 那組值決定整表重建時要算多少版面，
+      是負載規模不是排版。
+    -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./06-rerender-storm.ts"></script>
+  </body>
+</html>

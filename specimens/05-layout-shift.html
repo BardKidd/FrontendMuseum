@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <title>標本 #5 版面位移 CLS · 前端效能病理標本館</title>
+    <!--
+      B 類標本：CLS 是 document 級的累計值，切 mode 一定要重載。
+      這一頁的樣式由標本自己注入，而且**那段 CSS 就是病變與治療的全部差異** ——
+      HTML 結構、時序、內容完全相同。
+    -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./05-layout-shift.ts"></script>
+  </body>
+</html>

@@ -122,6 +122,16 @@ export function App() {
   const [cpuThrottle, setCpuThrottle] = useState<CpuThrottle>('unknown');
   const [refreshHz, setRefreshHz] = useState(0);
   const [history, setHistory] = useState<RunResult[]>([]);
+  /**
+   * web-vitals 交叉驗證。**預設關閉**：web-vitals 自己會註冊一整組 PerformanceObserver，
+   * 常態開著等於讓「用來驗 baseline 的工具」變成污染 baseline 的來源（陷阱 #7）。
+   *
+   * 這個開關是 Phase 2 補的。在此之前 `?validate=1` 的機制早就實作好了
+   *（`runtime.ts` 的 validate 分支、`buildSpecimenUrl` 的 validate 參數），
+   * 但**外殼從來沒有任何地方會把它加進 URL** —— 也就是說那整段程式碼在 UI 上不可達，
+   * 驗收第 8 條只能靠手改網址。功能寫了卻按不到，跟沒寫的差別只在它會通過 typecheck。
+   */
+  const [validate, setValidate] = useState(false);
   const [view, setView] = useState<PanelBuffer>(() => emptyBuffer());
   /**
    * iframe 的 src 是**狀態，不是衍生值**。
@@ -138,6 +148,22 @@ export function App() {
 
   const meta = getSpecimen(specimenId) ?? INITIAL_META;
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  /**
+   * 每次要換 iframe 網址都走這裡。三個呼叫點（換標本、B 類換 mode、切 validate）
+   * 各自組一次 URL 的話，遲早有一個忘了帶 validate 或忘了帶 cache buster，
+   * 而症狀是「這個組合下交叉驗證莫名其妙沒開」。
+   */
+  function specimenUrl(target: SpecimenMeta, modeId: string, wantValidate: boolean): string {
+    return buildSpecimenUrl(target, {
+      mode: modeId,
+      t: String(Date.now()),
+      sid: sessionId,
+      // 一定要傳 undefined 而不是 '0' 或 ''：iframe 端是 `=== '1'` 判斷，
+      // 但 URLSearchParams 對每個值做 ToString，帶了就會多出一個沒意義的參數。
+      validate: wantValidate ? '1' : undefined,
+    });
+  }
 
   // ── 訊息處理器只讀 ref，不讀 state：它註冊一次就不再重建，讀 state 會讀到舊值 ──
   const specimenIdRef = useRef<SpecimenId>(INITIAL_META.id);
@@ -306,7 +332,19 @@ export function App() {
   /** 把剛跑完的那一輪存進歷史。**永遠不丟棄前一輪** —— 那是可重現性的唯一證據 */
   function finalizeRun(): void {
     const samples = [...runSamplesRef.current.values()].sort((a, b) => a.startTime - b.startTime);
-    if (samples.length === 0) return;
+    const last = bufRef.current.metrics;
+
+    /*
+     * 「這一輪值不值得入帳」的判準取自標本的主指標，不是「有沒有互動樣本」。
+     *
+     * 舊寫法是 `samples.length === 0 → return`，那對 INP 系的標本是對的
+     * （換標本／切 mode 都會經過這裡，不擋的話歷史會塞滿空白輪）。
+     * 但標本 #4／#6 的主指標是 droppedFrames，它們一輪下來本來就零筆互動 ——
+     * 舊寫法會把它們每一輪都丟掉，而面板上只會顯示「還沒有完成的 run」。
+     */
+    const inpBased = meta.primaryMetric.startsWith('inp');
+    if (inpBased ? samples.length === 0 : last === null) return;
+
     const finished: RunResult = {
       runId: runIdRef.current,
       specimenId: specimenIdRef.current,
@@ -315,6 +353,10 @@ export function App() {
       conditions,
       samples,
       stats: computeRunStats(samples.map((s) => s.duration)),
+      // 終值快照取「本輪最後一批 metrics」。它們是累計值不是增量，所以最後一批就是全貌。
+      customFinal: last ? { ...last.custom } : undefined,
+      lcpFinal: last?.lcp ?? null,
+      clsFinal: last?.cls ?? null,
     };
     setHistory((h) => [...h, finished]);
   }
@@ -358,8 +400,17 @@ export function App() {
     } else {
       // B 類：LCP 載入後定案、CLS 累積整個 page lifetime，只能整份重載。
       // Phase 0 沒有 B 類標本，但 URL 契約已經凍結，這條分支必須先存在（spec §3.4）。
-      setIframeSrc(buildSpecimenUrl(meta, { mode: next, t: String(Date.now()), sid: sessionId }));
+      setIframeSrc(specimenUrl(meta, next, validate));
     }
+  }
+
+  /** 切交叉驗證一定要重載：web-vitals 是在 iframe 開機時決定要不要動態 import 的 */
+  function toggleValidate(next: boolean): void {
+    finalizeRun();
+    setValidate(next);
+    startNewRun();
+    // 用參數 next 而不是 state validate —— setState 是非同步的，這一行讀到的還是舊值
+    setIframeSrc(specimenUrl(meta, modeRef.current, next));
   }
 
   function switchSpecimen(id: SpecimenId): void {
@@ -372,7 +423,7 @@ export function App() {
     setSpecimenId(id);
     setMode(m);
     startNewRun();
-    setIframeSrc(buildSpecimenUrl(next, { mode: m, t: String(Date.now()), sid: sessionId }));
+    setIframeSrc(specimenUrl(next, m, validate));
   }
 
   const modes = [...meta.modes].sort((a, b) => a.order - b.order);
@@ -427,7 +478,10 @@ export function App() {
           : `${meta.protocol.intervalMs}ms`}
       </p>
       <p>
-        {meta.protocol.intervalMs !== null && (
+        {/* 機器節拍的標本不渲染節拍器：它的 setInterval + 每拍一次 setState
+            會落在待量的那一段裡，而標本 #1 的兇手段正是 presentation。
+            人也照不了 17ms 的拍子 —— 照著做出來的是另一個實驗。 */}
+        {meta.protocol.intervalMs !== null && !meta.protocol.machinePaced && (
           <Metronome
             key={runId}
             intervalMs={meta.protocol.intervalMs}
@@ -450,6 +504,18 @@ export function App() {
           </select>
         </label>{' '}
         <button onClick={rerun}>重跑（把這一輪存進歷史，開新的一輪）</button>
+      </p>
+      <p>
+        <label>
+          <input
+            type="checkbox"
+            checked={validate}
+            onChange={(e) => toggleValidate(e.target.checked)}
+          />{' '}
+          web-vitals 交叉驗證（會重載 iframe）
+        </label>{' '}
+        —— 預設關閉：web-vitals 自己那組 observer 會污染 baseline，只在對帳時開（陷阱 #7）。
+        對帳結果同時進面板的 crossCheck 欄與 iframe 的 console.table。
       </p>
 
       {/*

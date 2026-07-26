@@ -2525,6 +2525,32 @@ export function RunHistory({ meta, mode, metrics, history }: RunHistoryProps) {
 
   const verdict = assessReproducibility(meta.id, modes, history);
 
+  /**
+   * 每個 mode 的資料算一次，表格與底下的 max 註記共用。
+   *
+   * 分成兩個 modes.map 各自 filter + computeRunStats 的話，同一組樣本會跑兩條
+   * 路徑 —— 兩邊的 spread 有機會對不起來，而那種不一致沒有任何徵兆。
+   * 跟「RunStats 只准有一份實作」是同一個理由。
+   */
+  const rows = modes.map((m) => {
+    const runs = history.filter((r) => r.specimenId === meta.id && r.mode === m.id);
+    const lesion = m.kind === 'pathological';
+    // median 走 derive.modeMedian（未四捨五入），比值與表格顯示共用同一個定義
+    const median = modeMedian(history, meta.id, m.id);
+    return {
+      m,
+      lesion,
+      values: runs.map((r) => Math.round(r.stats.median)),
+      median,
+      // 跟輪內統計用同一支 computeRunStats。全站只准有一份 median / spread 定義
+      spread: runs.length > 0 ? computeRunStats(runs.map((r) => r.stats.median)).spread : null,
+      // max 仍然列出來，因為那才是面板頂端報的那個數字 —— 只是不拿它判定可重現
+      maxes: runs.map((r) => Math.round(r.stats.max)),
+      pending: m.id === mode ? live : null,
+      ratio: lesion ? null : remedyRatio(pathologicalMedian, median),
+    };
+  });
+
   return (
     <section className="history">
       <h3>歷次 run · 同一標本、同一 mode、同一組 conditions 之間才可比</h3>
@@ -2540,64 +2566,50 @@ export function RunHistory({ meta, mode, metrics, history }: RunHistoryProps) {
           </tr>
         </thead>
         <tbody>
-          {modes.map((m) => {
-            const runs = history.filter((r) => r.specimenId === meta.id && r.mode === m.id);
-            const pendingHere = m.id === mode ? live : null;
-            const lesion = m.kind === 'pathological';
+          {rows.map((row) => {
+            const cls = row.lesion ? 'is-lesion' : 'is-remedy';
 
-            if (runs.length === 0) {
+            if (row.values.length === 0 || row.median === null || row.spread === null) {
               return (
-                <tr key={m.id} className={lesion ? 'is-lesion' : 'is-remedy'}>
-                  <td>{m.label}</td>
+                <tr key={row.m.id} className={cls}>
+                  <td>{row.m.label}</td>
                   <td colSpan={4}>
-                    {pendingHere === null
+                    {row.pending === null
                       ? '（還沒有完成的 run）'
-                      : `（進行中 ${pendingHere}，按「重跑」才入帳）`}
+                      : `（進行中 ${row.pending}，按「重跑」才入帳）`}
                   </td>
                 </tr>
               );
             }
 
-            const values = runs.map((r) => Math.round(r.stats.median));
-            // 跟輪內統計用同一支 computeRunStats。全站只准有一份 median / spread 定義
-            const across = computeRunStats(values);
-            const spread = across.spread;
-            const thisMedian = modeMedian(history, meta.id, m.id);
-            const ratio = lesion ? null : remedyRatio(pathologicalMedian, thisMedian);
-
             return (
-              <tr key={m.id} className={lesion ? 'is-lesion' : 'is-remedy'}>
-                <td>{m.label}</td>
+              <tr key={row.m.id} className={cls}>
+                <td>{row.m.label}</td>
                 <td>
-                  {values.join(' / ')}
-                  {pendingHere === null ? '' : ` (+ 進行中 ${pendingHere})`}
+                  {row.values.join(' / ')}
+                  {row.pending === null ? '' : ` (+ 進行中 ${row.pending})`}
                 </td>
-                <td>{Math.round(across.median)}</td>
-                <td className={spread > REPRODUCIBLE_SPREAD_MAX ? 'is-lesion' : ''}>
-                  ±{Math.round(spread * 100)}%
+                <td>{Math.round(row.median)}</td>
+                <td className={row.spread > REPRODUCIBLE_SPREAD_MAX ? 'is-lesion' : ''}>
+                  ±{Math.round(row.spread * 100)}%
                 </td>
-                <td>{ratio === null ? '—' : `${ratio.toFixed(1)}×`}</td>
+                <td>{row.ratio === null ? '—' : `${row.ratio.toFixed(1)}×`}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
 
-      {modes.map((m) => {
-        const runs = history.filter((r) => r.specimenId === meta.id && r.mode === m.id);
-        if (runs.length === 0) return null;
-        const spread = computeRunStats(runs.map((r) => Math.round(r.stats.median))).spread;
-        // max 仍然列出來，因為那才是面板頂端報的那個數字 —— 只是不拿它判定可重現
-        const maxes = runs.map((r) => Math.round(r.stats.max)).join(' / ');
-        return (
-          <p key={m.id} className="inp__note">
-            {m.label} 各輪回報值 max：{maxes}
-            {spread > REPRODUCIBLE_SPREAD_MAX
+      {rows.map((row) =>
+        row.maxes.length === 0 ? null : (
+          <p key={row.m.id} className="inp__note">
+            {row.m.label} 各輪回報值 max：{row.maxes.join(' / ')}
+            {row.spread !== null && row.spread > REPRODUCIBLE_SPREAD_MAX
               ? ' · ⚠ 跨輪離散度超標 —— 檢查其他分頁、背景下載、throttle 設定'
               : ''}
           </p>
-        );
-      })}
+        ),
+      )}
 
       <p className={verdict.reproducible ? 'badge badge--ok' : 'badge badge--pending'}>
         {verdict.reproducible ? '可重現 ✓' : '尚未可重現'}

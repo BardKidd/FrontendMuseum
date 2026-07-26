@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="360" viewBox="0 0 600 360">
+  <!--
+    標本 #5 的位移來源一：一張沒有寫 width/height 的 <img>。
+    自架而不是用 CDN —— CDN 會被快取，第二次載入就不位移了，實驗不可重現（spec:1126）。
+    本檔的內在尺寸 600×360（aspect-ratio 5:3）就是治療版要拿去預留空間的那個比例。
+  -->
+  <rect width="600" height="360" fill="#20304a"/>
+  <g fill="#4a6fa5">
+    <rect x="40" y="240" width="90" height="80"/>
+    <rect x="150" y="180" width="90" height="140"/>
+    <rect x="260" y="120" width="90" height="200"/>
+    <rect x="370" y="200" width="90" height="120"/>
+    <rect x="480" y="80" width="90" height="240"/>
+  </g>
+  <text x="40" y="70" font-size="34" fill="#ffffff">位移來源一</text>
+  <text x="40" y="112" font-size="20" fill="#c8d6ea">沒有 width / height 的圖片</text>
+</svg>

@@ -1,0 +1,4050 @@
+{
+  "mergedFrom": [
+    "/tmp/claude-1000/-home-valens-Projects-FrontendMuseum/fd348489-b3ea-4c0a-8f4e-e7e1d784aa1c/scratchpad/round1.json",
+    "/tmp/claude-1000/-home-valens-Projects-FrontendMuseum/fd348489-b3ea-4c0a-8f4e-e7e1d784aa1c/scratchpad/round2.json"
+  ],
+  "measuredAt": "2026-07-25T16:07:31.594Z",
+  "cpuThrottle": "4x",
+  "driver": "CDP (Input.dispatchMouseEvent) —— 機器驅動，非人手",
+  "runsPerMode": 3,
+  "report": [
+    {
+      "specimenId": "00-calibration",
+      "mode": "busy-30",
+      "metric": "INP processing (ms)",
+      "values": [
+        32.59999999962747,
+        32.70000000111759,
+        33
+      ],
+      "median": 32.70000000111759,
+      "range": 0.40000000037252903,
+      "dispersion": 0.01223241591311493,
+      "threshold": 0.15,
+      "floor": 16,
+      "atFloor": true,
+      "verdict": "reproducible",
+      "culprits": [
+        "processing",
+        "processing",
+        "processing"
+      ],
+      "culpritStable": true,
+      "droppedFramesPeak": [
+        1,
+        0,
+        0
+      ],
+      "sortMs": [],
+      "lcpElement": "div.cal-lcp-text",
+      "clsSessionCount": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "specimenId": "00-calibration",
+      "mode": "busy-300",
+      "metric": "INP processing (ms)",
+      "values": [
+        303.19999999925494,
+        303.7999999988824,
+        304.09999999962747
+      ],
+      "median": 303.7999999988824,
+      "range": 0.900000000372529,
+      "dispersion": 0.0029624753139428565,
+      "threshold": 0.15,
+      "floor": 16,
+      "atFloor": true,
+      "verdict": "reproducible",
+      "culprits": [
+        "processing",
+        "processing",
+        "processing"
+      ],
+      "culpritStable": true,
+      "droppedFramesPeak": [
+        66,
+        67,
+        66
+      ],
+      "sortMs": [],
+      "lcpElement": "div.cal-lcp-text",
+      "clsSessionCount": []
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "broken",
+      "metric": "INP median (ms)",
+      "values": [
+        1368,
+        1376,
+        1264
+      ],
+      "median": 1368,
+      "range": 112,
+      "dispersion": 0.08187134502923976,
+      "threshold": 0.3,
+      "floor": 16,
+      "atFloor": false,
+      "verdict": "reproducible",
+      "culprits": [
+        "presentation",
+        "presentation",
+        "presentation"
+      ],
+      "culpritStable": true,
+      "droppedFramesPeak": [
+        83,
+        81,
+        74
+      ],
+      "sortMs": [
+        120.2,
+        121.6,
+        116
+      ],
+      "lcpElement": "h1",
+      "clsSessionCount": [
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-worker",
+      "metric": "INP median (ms)",
+      "values": [
+        576,
+        576,
+        576
+      ],
+      "median": 576,
+      "range": 0,
+      "dispersion": 0,
+      "threshold": 0.3,
+      "floor": 16,
+      "atFloor": true,
+      "verdict": "reproducible",
+      "culprits": [
+        "presentation",
+        "presentation",
+        "presentation"
+      ],
+      "culpritStable": true,
+      "droppedFramesPeak": [
+        33,
+        32,
+        33
+      ],
+      "sortMs": [],
+      "lcpElement": "h1",
+      "clsSessionCount": [
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-yield",
+      "metric": "INP median (ms)",
+      "values": [
+        80,
+        80,
+        80
+      ],
+      "median": 80,
+      "range": 0,
+      "dispersion": 0,
+      "threshold": 0.3,
+      "floor": 16,
+      "atFloor": true,
+      "verdict": "reproducible",
+      "culprits": [
+        "presentation",
+        "presentation",
+        "presentation"
+      ],
+      "culpritStable": true,
+      "droppedFramesPeak": [
+        3,
+        2,
+        2
+      ],
+      "sortMs": [
+        134.7,
+        122.1,
+        132.2
+      ],
+      "lcpElement": "h1",
+      "clsSessionCount": [
+        5,
+        5,
+        6
+      ]
+    },
+    {
+      "specimenId": "02-long-list",
+      "mode": "broken",
+      "metric": "LCP (ms)",
+      "values": [
+        1396,
+        1356,
+        1360
+      ],
+      "median": 1360,
+      "range": 40,
+      "dispersion": 0.029411764705882353,
+      "threshold": 0.3,
+      "floor": 50,
+      "atFloor": true,
+      "verdict": "reproducible",
+      "culprits": [],
+      "culpritStable": null,
+      "droppedFramesPeak": [
+        0,
+        0,
+        0
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": []
+    },
+    {
+      "specimenId": "02-long-list",
+      "mode": "fixed-content-visibility",
+      "metric": "LCP (ms)",
+      "values": [
+        592,
+        612,
+        576
+      ],
+      "median": 592,
+      "range": 36,
+      "dispersion": 0.060810810810810814,
+      "threshold": 0.3,
+      "floor": 50,
+      "atFloor": true,
+      "verdict": "reproducible",
+      "culprits": [],
+      "culpritStable": null,
+      "droppedFramesPeak": [
+        0,
+        0,
+        0
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": []
+    },
+    {
+      "specimenId": "02-long-list",
+      "mode": "fixed-virtual",
+      "metric": "LCP (ms)",
+      "values": [
+        668,
+        680,
+        724
+      ],
+      "median": 680,
+      "range": 56,
+      "dispersion": 0.08235294117647059,
+      "threshold": 0.3,
+      "floor": 50,
+      "atFloor": false,
+      "verdict": "reproducible",
+      "culprits": [],
+      "culpritStable": null,
+      "droppedFramesPeak": [
+        8,
+        8,
+        8
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": []
+    },
+    {
+      "specimenId": "03-layout-thrashing",
+      "mode": "broken",
+      "metric": "forced style&layout median (ms)",
+      "values": [
+        744.5,
+        716.35,
+        678.25
+      ],
+      "median": 716.35,
+      "range": 66.25,
+      "dispersion": 0.09248272492496684,
+      "threshold": 0.3,
+      "floor": 16,
+      "atFloor": false,
+      "verdict": "reproducible",
+      "culprits": [
+        "processing",
+        "processing",
+        "processing"
+      ],
+      "culpritStable": true,
+      "droppedFramesPeak": [
+        98,
+        107,
+        88
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": [
+        10,
+        21,
+        32
+      ]
+    },
+    {
+      "specimenId": "03-layout-thrashing",
+      "mode": "fixed-batched",
+      "metric": "forced style&layout median (ms)",
+      "values": [
+        0.1,
+        0,
+        0
+      ],
+      "median": 0,
+      "range": 0.1,
+      "dispersion": null,
+      "threshold": 0.3,
+      "floor": 16,
+      "atFloor": true,
+      "verdict": "reproducible",
+      "culprits": [
+        "presentation",
+        "presentation",
+        "presentation"
+      ],
+      "culpritStable": true,
+      "droppedFramesPeak": [
+        10,
+        2,
+        2
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": [
+        43,
+        54,
+        65
+      ]
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "broken",
+      "metric": "dropped frames peak",
+      "values": [
+        38,
+        46,
+        43
+      ],
+      "median": 43,
+      "range": 8,
+      "dispersion": 0.18604651162790697,
+      "threshold": 0.3,
+      "floor": 5,
+      "atFloor": false,
+      "verdict": "reproducible",
+      "culprits": [],
+      "culpritStable": null,
+      "droppedFramesPeak": [
+        38,
+        46,
+        43
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": [
+        3,
+        6,
+        8
+      ]
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "fixed-observer",
+      "metric": "dropped frames peak",
+      "values": [
+        4,
+        1,
+        1
+      ],
+      "median": 1,
+      "range": 3,
+      "dispersion": 3,
+      "threshold": 0.3,
+      "floor": 5,
+      "atFloor": true,
+      "verdict": "reproducible",
+      "culprits": [],
+      "culpritStable": null,
+      "droppedFramesPeak": [
+        4,
+        1,
+        1
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": [
+        15,
+        16,
+        17
+      ]
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "fixed-passive",
+      "metric": "dropped frames peak",
+      "values": [
+        20,
+        29,
+        27
+      ],
+      "median": 27,
+      "range": 9,
+      "dispersion": 0.3333333333333333,
+      "threshold": 0.3,
+      "floor": 5,
+      "atFloor": false,
+      "verdict": "unstable",
+      "culprits": [],
+      "culpritStable": null,
+      "droppedFramesPeak": [
+        20,
+        29,
+        27
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": [
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "fixed-raf",
+      "metric": "dropped frames peak",
+      "values": [
+        20,
+        27,
+        18
+      ],
+      "median": 20,
+      "range": 9,
+      "dispersion": 0.45,
+      "threshold": 0.3,
+      "floor": 5,
+      "atFloor": false,
+      "verdict": "unstable",
+      "culprits": [],
+      "culpritStable": null,
+      "droppedFramesPeak": [
+        20,
+        27,
+        18
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": [
+        9,
+        11,
+        13
+      ]
+    },
+    {
+      "specimenId": "05-layout-shift",
+      "mode": "broken",
+      "metric": "CLS",
+      "values": [
+        0.12658805371414664,
+        0.11192911679987019,
+        0.12658805371414664
+      ],
+      "median": 0.12658805371414664,
+      "range": 0.014658936914276444,
+      "dispersion": 0.11580031830948562,
+      "threshold": 0.3,
+      "floor": 0.01,
+      "atFloor": false,
+      "verdict": "reproducible",
+      "culprits": [],
+      "culpritStable": null,
+      "droppedFramesPeak": [
+        0,
+        0,
+        0
+      ],
+      "sortMs": [],
+      "lcpElement": "div#ls-prose.ls-prose",
+      "clsSessionCount": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "specimenId": "05-layout-shift",
+      "mode": "fixed",
+      "metric": "CLS",
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "median": 0,
+      "range": 0,
+      "dispersion": 0,
+      "threshold": 0.3,
+      "floor": 0.01,
+      "atFloor": true,
+      "verdict": "reproducible",
+      "culprits": [],
+      "culpritStable": null,
+      "droppedFramesPeak": [
+        0,
+        0,
+        0
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": []
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "broken",
+      "metric": "dropped frames peak",
+      "values": [
+        225,
+        237,
+        231
+      ],
+      "median": 231,
+      "range": 12,
+      "dispersion": 0.05194805194805195,
+      "threshold": 0.3,
+      "floor": 5,
+      "atFloor": false,
+      "verdict": "reproducible",
+      "culprits": [
+        "presentation",
+        "presentation",
+        "presentation"
+      ],
+      "culpritStable": true,
+      "droppedFramesPeak": [
+        225,
+        237,
+        231
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": [
+        1,
+        3,
+        5
+      ]
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "fixed-backpressure",
+      "metric": "dropped frames peak",
+      "values": [
+        3,
+        4,
+        4
+      ],
+      "median": 4,
+      "range": 1,
+      "dispersion": 0.25,
+      "threshold": 0.3,
+      "floor": 5,
+      "atFloor": true,
+      "verdict": "reproducible",
+      "culprits": [
+        "presentation",
+        "presentation",
+        "presentation"
+      ],
+      "culpritStable": true,
+      "droppedFramesPeak": [
+        3,
+        4,
+        4
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": [
+        19,
+        21,
+        23
+      ]
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "fixed-batch",
+      "metric": "dropped frames peak",
+      "values": [
+        219,
+        222,
+        223
+      ],
+      "median": 222,
+      "range": 4,
+      "dispersion": 0.018018018018018018,
+      "threshold": 0.3,
+      "floor": 5,
+      "atFloor": true,
+      "verdict": "reproducible",
+      "culprits": [
+        "presentation",
+        "presentation",
+        "presentation"
+      ],
+      "culpritStable": true,
+      "droppedFramesPeak": [
+        219,
+        222,
+        223
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": [
+        7,
+        9,
+        11
+      ]
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "fixed-granular",
+      "metric": "dropped frames peak",
+      "values": [
+        8,
+        7,
+        4
+      ],
+      "median": 7,
+      "range": 4,
+      "dispersion": 0.5714285714285714,
+      "threshold": 0.3,
+      "floor": 5,
+      "atFloor": true,
+      "verdict": "reproducible",
+      "culprits": [
+        "presentation",
+        "presentation",
+        "presentation"
+      ],
+      "culpritStable": true,
+      "droppedFramesPeak": [
+        8,
+        7,
+        4
+      ],
+      "sortMs": [],
+      "lcpElement": "p",
+      "clsSessionCount": [
+        13,
+        15,
+        17
+      ]
+    }
+  ],
+  "ratios": [
+    {
+      "specimenId": "00-calibration",
+      "treatment": "busy-30",
+      "metric": "INP processing (ms)",
+      "broken": 303.7999999988824,
+      "treated": 32.70000000111759,
+      "treatedAtFloor": false,
+      "ratio": 9.290519877324142
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "treatment": "fixed-worker",
+      "metric": "INP median (ms)",
+      "broken": 1368,
+      "treated": 576,
+      "treatedAtFloor": false,
+      "ratio": 2.375
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "treatment": "fixed-yield",
+      "metric": "INP median (ms)",
+      "broken": 1368,
+      "treated": 80,
+      "treatedAtFloor": false,
+      "ratio": 17.1
+    },
+    {
+      "specimenId": "02-long-list",
+      "treatment": "fixed-content-visibility",
+      "metric": "LCP (ms)",
+      "broken": 1360,
+      "treated": 592,
+      "treatedAtFloor": false,
+      "ratio": 2.2972972972972974
+    },
+    {
+      "specimenId": "02-long-list",
+      "treatment": "fixed-virtual",
+      "metric": "LCP (ms)",
+      "broken": 1360,
+      "treated": 680,
+      "treatedAtFloor": false,
+      "ratio": 2
+    },
+    {
+      "specimenId": "03-layout-thrashing",
+      "treatment": "fixed-batched",
+      "metric": "forced style&layout median (ms)",
+      "broken": 716.35,
+      "treated": 0,
+      "treatedAtFloor": true,
+      "ratio": null
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "treatment": "fixed-observer",
+      "metric": "dropped frames peak",
+      "broken": 43,
+      "treated": 1,
+      "treatedAtFloor": true,
+      "ratio": null
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "treatment": "fixed-passive",
+      "metric": "dropped frames peak",
+      "broken": 43,
+      "treated": 27,
+      "treatedAtFloor": false,
+      "ratio": 1.5925925925925926
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "treatment": "fixed-raf",
+      "metric": "dropped frames peak",
+      "broken": 43,
+      "treated": 20,
+      "treatedAtFloor": false,
+      "ratio": 2.15
+    },
+    {
+      "specimenId": "05-layout-shift",
+      "treatment": "fixed",
+      "metric": "CLS",
+      "broken": 0.12658805371414664,
+      "treated": 0,
+      "treatedAtFloor": true,
+      "ratio": null
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "treatment": "fixed-backpressure",
+      "metric": "dropped frames peak",
+      "broken": 231,
+      "treated": 4,
+      "treatedAtFloor": true,
+      "ratio": null
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "treatment": "fixed-batch",
+      "metric": "dropped frames peak",
+      "broken": 231,
+      "treated": 222,
+      "treatedAtFloor": false,
+      "ratio": 1.0405405405405406
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "treatment": "fixed-granular",
+      "metric": "dropped frames peak",
+      "broken": 231,
+      "treated": 7,
+      "treatedAtFloor": false,
+      "ratio": 33
+    }
+  ],
+  "records": [
+    {
+      "specimenId": "00-calibration",
+      "mode": "busy-300",
+      "run": 1,
+      "totalInteractions": 10,
+      "inp": 320,
+      "isMaxNotP98": true,
+      "inputDelay": 0.599999999627471,
+      "processing": 303.19999999925494,
+      "presentation": 16.200000001117587,
+      "duration": 320,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "calibrationBusyLoop",
+      "specimenScript": 300.5,
+      "lcp": {
+        "value": 1572,
+        "el": "div.cal-lcp-text"
+      },
+      "cls": null,
+      "custom": {
+        "busyLoopMs": 300,
+        "layoutIterations": 200,
+        "lcpExpectedMs": 1500,
+        "lcpTargetShownAtMs": 1544,
+        "lastBusyElapsedMs": 300.2,
+        "droppedFrames": 66,
+        "droppedFramesPeak": 66,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-1",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 320,
+        "median": 312,
+        "p75": 312,
+        "spread": 0.05128205128205128
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "00-calibration",
+      "mode": "busy-300",
+      "run": 2,
+      "totalInteractions": 10,
+      "inp": 312,
+      "isMaxNotP98": true,
+      "inputDelay": 1.200000001117587,
+      "processing": 303.7999999988824,
+      "presentation": 7,
+      "duration": 312,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "calibrationBusyLoop",
+      "specimenScript": 300.19999999925494,
+      "lcp": {
+        "value": 1572,
+        "el": "div.cal-lcp-text"
+      },
+      "cls": null,
+      "custom": {
+        "busyLoopMs": 300,
+        "layoutIterations": 200,
+        "lastBusyElapsedMs": 300.1,
+        "droppedFrames": 65,
+        "droppedFramesPeak": 67,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-2",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 312,
+        "median": 308,
+        "p75": 312,
+        "spread": 0.025974025974025976
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "00-calibration",
+      "mode": "busy-300",
+      "run": 3,
+      "totalInteractions": 10,
+      "inp": 312,
+      "isMaxNotP98": true,
+      "inputDelay": 0.40000000037252903,
+      "processing": 304.09999999962747,
+      "presentation": 7.5,
+      "duration": 312,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "calibrationBusyLoop",
+      "specimenScript": 300,
+      "lcp": {
+        "value": 1572,
+        "el": "div.cal-lcp-text"
+      },
+      "cls": null,
+      "custom": {
+        "busyLoopMs": 300,
+        "layoutIterations": 200,
+        "lastBusyElapsedMs": 300.2,
+        "droppedFrames": 65,
+        "droppedFramesPeak": 66,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-3",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 312,
+        "median": 308,
+        "p75": 312,
+        "spread": 0.025974025974025976
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "00-calibration",
+      "mode": "busy-30",
+      "run": 1,
+      "totalInteractions": 10,
+      "inp": 40,
+      "isMaxNotP98": true,
+      "inputDelay": 0.8000000007450581,
+      "processing": 32.59999999962747,
+      "presentation": 6.599999999627471,
+      "duration": 40,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 1572,
+        "el": "div.cal-lcp-text"
+      },
+      "cls": {
+        "value": 0.00003703560489269341,
+        "sessionCount": 1
+      },
+      "custom": {
+        "busyLoopMs": 30,
+        "layoutIterations": 200,
+        "lastBusyElapsedMs": 30.3,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 1,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-5",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 40,
+        "median": 40,
+        "p75": 40,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "00-calibration",
+      "mode": "busy-30",
+      "run": 2,
+      "totalInteractions": 10,
+      "inp": 40,
+      "isMaxNotP98": true,
+      "inputDelay": 0.8999999985098839,
+      "processing": 32.70000000111759,
+      "presentation": 6.400000000372529,
+      "duration": 40,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 1572,
+        "el": "div.cal-lcp-text"
+      },
+      "cls": {
+        "value": 0.00003703560489269341,
+        "sessionCount": 1
+      },
+      "custom": {
+        "busyLoopMs": 30,
+        "layoutIterations": 200,
+        "lastBusyElapsedMs": 30.5,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-6",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 40,
+        "median": 40,
+        "p75": 40,
+        "spread": 0.2
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "00-calibration",
+      "mode": "busy-30",
+      "run": 3,
+      "totalInteractions": 10,
+      "inp": 40,
+      "isMaxNotP98": true,
+      "inputDelay": 0.5,
+      "processing": 33,
+      "presentation": 6.5,
+      "duration": 40,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 1572,
+        "el": "div.cal-lcp-text"
+      },
+      "cls": {
+        "value": 0.00003703560489269341,
+        "sessionCount": 1
+      },
+      "custom": {
+        "busyLoopMs": 30,
+        "layoutIterations": 200,
+        "lastBusyElapsedMs": 30,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-7",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 40,
+        "median": 40,
+        "p75": 40,
+        "spread": 0.2
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "broken",
+      "run": 1,
+      "totalInteractions": 10,
+      "inp": 1368,
+      "isMaxNotP98": true,
+      "inputDelay": 1.800000000745058,
+      "processing": 135.5,
+      "presentation": 1230.699999999255,
+      "duration": 1368,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 72.09999999962747,
+      "lcp": {
+        "value": 140,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0008488945312499995,
+        "sessionCount": 2
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 10,
+        "cancelledSorts": 0,
+        "sortMs": 120.2,
+        "droppedFrames": 83,
+        "droppedFramesPeak": 83,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-2",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 1368,
+        "median": 1368,
+        "p75": 1368,
+        "spread": 0.005847953216374269
+      },
+      "round": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "broken",
+      "run": 2,
+      "totalInteractions": 10,
+      "inp": 1376,
+      "isMaxNotP98": true,
+      "inputDelay": 1.400000000372529,
+      "processing": 134.7999999988824,
+      "presentation": 1239.800000000745,
+      "duration": 1376,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 1340.8999999985099,
+      "lcp": {
+        "value": 140,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0014203994140624993,
+        "sessionCount": 3
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 10,
+        "cancelledSorts": 0,
+        "sortMs": 121.6,
+        "droppedFrames": 81,
+        "droppedFramesPeak": 81,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-3",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 1376,
+        "median": 1376,
+        "p75": 1376,
+        "spread": 0
+      },
+      "round": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "broken",
+      "run": 3,
+      "totalInteractions": 10,
+      "inp": 1264,
+      "isMaxNotP98": true,
+      "inputDelay": 1.199999999254942,
+      "processing": 143.09999999962747,
+      "presentation": 1119.7000000011176,
+      "duration": 1264,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 1225.3999999985099,
+      "lcp": {
+        "value": 140,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0016819453125000011,
+        "sessionCount": 4
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 10,
+        "cancelledSorts": 0,
+        "sortMs": 116,
+        "droppedFrames": 74,
+        "droppedFramesPeak": 74,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-4",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 1264,
+        "median": 1264,
+        "p75": 1264,
+        "spread": 0
+      },
+      "round": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-yield",
+      "run": 1,
+      "totalInteractions": 10,
+      "inp": 80,
+      "isMaxNotP98": true,
+      "inputDelay": 0.599999999627471,
+      "processing": 7.200000001117587,
+      "presentation": 72.19999999925494,
+      "duration": 80,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 63.10000000335276,
+      "lcp": {
+        "value": 140,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0025174082031250047,
+        "sessionCount": 5
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 1,
+        "cancelledSorts": 9,
+        "sortMs": 134.7,
+        "droppedFrames": 3,
+        "droppedFramesPeak": 3,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-6",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 80,
+        "median": 80,
+        "p75": 80,
+        "spread": 0
+      },
+      "round": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-yield",
+      "run": 2,
+      "totalInteractions": 10,
+      "inp": 80,
+      "isMaxNotP98": true,
+      "inputDelay": 2.800000000745058,
+      "processing": 6.799999998882413,
+      "presentation": 70.40000000037253,
+      "duration": 80,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 62.1999999973923,
+      "lcp": {
+        "value": 140,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0025174082031250047,
+        "sessionCount": 5
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 1,
+        "cancelledSorts": 9,
+        "sortMs": 122.1,
+        "droppedFrames": 2,
+        "droppedFramesPeak": 2,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-7",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 80,
+        "median": 80,
+        "p75": 80,
+        "spread": 0
+      },
+      "round": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-yield",
+      "run": 3,
+      "totalInteractions": 10,
+      "inp": 80,
+      "isMaxNotP98": true,
+      "inputDelay": 0.7000000011175871,
+      "processing": 6.400000000372529,
+      "presentation": 72.89999999850988,
+      "duration": 80,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 58.000000001862645,
+      "lcp": {
+        "value": 140,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0025174082031250047,
+        "sessionCount": 6
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 1,
+        "cancelledSorts": 9,
+        "sortMs": 132.2,
+        "droppedFrames": 2,
+        "droppedFramesPeak": 2,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-8",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 80,
+        "median": 80,
+        "p75": 80,
+        "spread": 0
+      },
+      "round": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-worker",
+      "run": 1,
+      "totalInteractions": 10,
+      "inp": 584,
+      "isMaxNotP98": true,
+      "inputDelay": 0.5,
+      "processing": 57.80000000074506,
+      "presentation": 525.6999999992549,
+      "duration": 584,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 553.9000000003725,
+      "lcp": {
+        "value": 140,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0025174082031250047,
+        "sessionCount": 7
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 1,
+        "cancelledSorts": 9,
+        "workerSerializeMs": 57,
+        "workerTransferMs": 589.7,
+        "workerSortMs": 28.4,
+        "workerRoundTripMs": 618.3,
+        "droppedFrames": 33,
+        "droppedFramesPeak": 33,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-10",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 584,
+        "median": 576,
+        "p75": 576,
+        "spread": 0.013888888888888888
+      },
+      "round": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-worker",
+      "run": 2,
+      "totalInteractions": 10,
+      "inp": 576,
+      "isMaxNotP98": true,
+      "inputDelay": 1.299999998882413,
+      "processing": 60.20000000111759,
+      "presentation": 514.5,
+      "duration": 576,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 546.9999999981374,
+      "lcp": {
+        "value": 140,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0025174082031250047,
+        "sessionCount": 8
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 1,
+        "cancelledSorts": 9,
+        "workerSerializeMs": 52.9,
+        "workerTransferMs": 566.7,
+        "workerSortMs": 29,
+        "workerRoundTripMs": 597.9,
+        "droppedFrames": 32,
+        "droppedFramesPeak": 32,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-11",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 576,
+        "median": 576,
+        "p75": 576,
+        "spread": 0
+      },
+      "round": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-worker",
+      "run": 3,
+      "totalInteractions": 10,
+      "inp": 576,
+      "isMaxNotP98": true,
+      "inputDelay": 0.6000000014901161,
+      "processing": 60.899999998509884,
+      "presentation": 514.5,
+      "duration": 576,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 550.5000000018626,
+      "lcp": {
+        "value": 140,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0025174082031250047,
+        "sessionCount": 9
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 1,
+        "cancelledSorts": 9,
+        "workerSerializeMs": 52.5,
+        "workerTransferMs": 585.5,
+        "workerSortMs": 28.8,
+        "workerRoundTripMs": 614.8,
+        "droppedFrames": 33,
+        "droppedFramesPeak": 33,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-12",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 576,
+        "median": 576,
+        "p75": 576,
+        "spread": 0
+      },
+      "round": 2
+    },
+    {
+      "specimenId": "03-layout-thrashing",
+      "mode": "broken",
+      "run": 1,
+      "totalInteractions": 10,
+      "inp": 872,
+      "isMaxNotP98": true,
+      "inputDelay": 1.099999999627471,
+      "processing": 849,
+      "presentation": 21.90000000037253,
+      "duration": 872,
+      "presentationClamped": false,
+      "forcedSamples": [
+        692.3,
+        798.8,
+        780.6,
+        692.3,
+        734.6,
+        754.4,
+        732.7,
+        777.1,
+        811.7,
+        705.6
+      ],
+      "forcedMedian": 744.5,
+      "forcedPeak": 811.7,
+      "forcedFn": "interleavedReadWrite",
+      "specimenScript": 848,
+      "lcp": {
+        "value": 132,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.3929939209839479,
+        "sessionCount": 10
+      },
+      "custom": {
+        "itemCount": 800,
+        "clicks": 10,
+        "readsPerClick": 800,
+        "writesPerClick": 800,
+        "lastPassMs": 735.3,
+        "layoutChecksum": 54888,
+        "droppedFrames": 93,
+        "droppedFramesPeak": 98,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-2",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 872,
+        "median": 788,
+        "p75": 840,
+        "spread": 0.17258883248730963
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "03-layout-thrashing",
+      "mode": "broken",
+      "run": 2,
+      "totalInteractions": 10,
+      "inp": 1104,
+      "isMaxNotP98": true,
+      "inputDelay": 0.8000000007450581,
+      "processing": 1082.5,
+      "presentation": 20.699999999254942,
+      "duration": 1104,
+      "presentationClamped": false,
+      "forcedSamples": [
+        579.4,
+        1028.5,
+        705.1,
+        726.2,
+        825.1,
+        797.8,
+        890.7,
+        665.7,
+        691.2,
+        706.5
+      ],
+      "forcedMedian": 716.35,
+      "forcedPeak": 1028.5,
+      "forcedFn": "interleavedReadWrite",
+      "specimenScript": 1079.5999999996275,
+      "lcp": {
+        "value": 132,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.4252567150290073,
+        "sessionCount": 21
+      },
+      "custom": {
+        "itemCount": 800,
+        "clicks": 10,
+        "readsPerClick": 800,
+        "writesPerClick": 800,
+        "lastPassMs": 736.6,
+        "layoutChecksum": 54888,
+        "droppedFrames": 86,
+        "droppedFramesPeak": 107,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-3",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 1104,
+        "median": 772,
+        "p75": 888,
+        "spread": 0.6217616580310881
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "03-layout-thrashing",
+      "mode": "broken",
+      "run": 3,
+      "totalInteractions": 10,
+      "inp": 800,
+      "isMaxNotP98": true,
+      "inputDelay": 1.099999999627471,
+      "processing": 781.9000000003725,
+      "presentation": 17,
+      "duration": 800,
+      "presentationClamped": false,
+      "forcedSamples": [
+        603.6,
+        695.6,
+        752.4,
+        660.9,
+        680.6,
+        675.9,
+        704.8,
+        721.3,
+        645.1,
+        646.4
+      ],
+      "forcedMedian": 678.25,
+      "forcedPeak": 752.4,
+      "forcedFn": "interleavedReadWrite",
+      "specimenScript": 779.8000000007451,
+      "lcp": {
+        "value": 132,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.4252567150290073,
+        "sessionCount": 32
+      },
+      "custom": {
+        "itemCount": 800,
+        "clicks": 10,
+        "readsPerClick": 800,
+        "writesPerClick": 800,
+        "lastPassMs": 666.4,
+        "layoutChecksum": 54888,
+        "droppedFrames": 78,
+        "droppedFramesPeak": 88,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-4",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 800,
+        "median": 720,
+        "p75": 752,
+        "spread": 0.2111111111111111
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "03-layout-thrashing",
+      "mode": "fixed-batched",
+      "run": 1,
+      "totalInteractions": 10,
+      "inp": 56,
+      "isMaxNotP98": true,
+      "inputDelay": 1.099999999627471,
+      "processing": 9.900000000372529,
+      "presentation": 45,
+      "duration": 56,
+      "presentationClamped": false,
+      "forcedSamples": [
+        0.1
+      ],
+      "forcedMedian": 0.1,
+      "forcedPeak": 0.1,
+      "forcedFn": "batchedReadThenWrite",
+      "specimenScript": 8,
+      "lcp": {
+        "value": 132,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.4252567150290073,
+        "sessionCount": 43
+      },
+      "custom": {
+        "itemCount": 800,
+        "clicks": 10,
+        "readsPerClick": 800,
+        "writesPerClick": 800,
+        "lastPassMs": 4.9,
+        "layoutChecksum": 54888,
+        "droppedFrames": 1,
+        "droppedFramesPeak": 10,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-6",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 56,
+        "median": 48,
+        "p75": 48,
+        "spread": 0.3333333333333333
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "03-layout-thrashing",
+      "mode": "fixed-batched",
+      "run": 2,
+      "totalInteractions": 10,
+      "inp": 48,
+      "isMaxNotP98": true,
+      "inputDelay": 0.900000000372529,
+      "processing": 6.799999998882413,
+      "presentation": 40.30000000074506,
+      "duration": 48,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 132,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.4252567150290073,
+        "sessionCount": 54
+      },
+      "custom": {
+        "itemCount": 800,
+        "clicks": 10,
+        "readsPerClick": 800,
+        "writesPerClick": 800,
+        "lastPassMs": 4.9,
+        "layoutChecksum": 54888,
+        "droppedFrames": 1,
+        "droppedFramesPeak": 2,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-7",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 48,
+        "median": 44,
+        "p75": 48,
+        "spread": 0.18181818181818182
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "03-layout-thrashing",
+      "mode": "fixed-batched",
+      "run": 3,
+      "totalInteractions": 10,
+      "inp": 56,
+      "isMaxNotP98": true,
+      "inputDelay": 1.099999999627471,
+      "processing": 7.599999999627471,
+      "presentation": 47.30000000074506,
+      "duration": 56,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 132,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.4252567150290073,
+        "sessionCount": 65
+      },
+      "custom": {
+        "itemCount": 800,
+        "clicks": 10,
+        "readsPerClick": 800,
+        "writesPerClick": 800,
+        "lastPassMs": 4.4,
+        "layoutChecksum": 54888,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 2,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-8",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 56,
+        "median": 48,
+        "p75": 48,
+        "spread": 0.3333333333333333
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "broken",
+      "run": 1,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "scanOnEveryWheel",
+      "specimenScript": 31.90000000037253,
+      "lcp": {
+        "value": 596,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.13697178790214612,
+        "sessionCount": 3
+      },
+      "custom": {
+        "rowCount": 8000,
+        "scrollEvents": 10,
+        "wheelEvents": 10,
+        "rectReads": 160000,
+        "passes": 20,
+        "lastPassMs": 32,
+        "visibleRows": 10,
+        "droppedFrames": 37,
+        "droppedFramesPeak": 38,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-2",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 0,
+        "max": 0,
+        "median": 0,
+        "p75": 0,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "broken",
+      "run": 2,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "scanOnEveryWheel",
+      "specimenScript": 34.09999999962747,
+      "lcp": {
+        "value": 596,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.13697178790214612,
+        "sessionCount": 6
+      },
+      "custom": {
+        "rowCount": 8000,
+        "scrollEvents": 11,
+        "wheelEvents": 10,
+        "rectReads": 168000,
+        "passes": 21,
+        "lastPassMs": 33.1,
+        "visibleRows": 10,
+        "droppedFrames": 46,
+        "droppedFramesPeak": 46,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-3",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 0,
+        "max": 0,
+        "median": 0,
+        "p75": 0,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "broken",
+      "run": 3,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "scanOnEveryWheel",
+      "specimenScript": 33.5,
+      "lcp": {
+        "value": 596,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.13697178790214612,
+        "sessionCount": 8
+      },
+      "custom": {
+        "rowCount": 8000,
+        "scrollEvents": 11,
+        "wheelEvents": 10,
+        "rectReads": 168000,
+        "passes": 21,
+        "lastPassMs": 38.8,
+        "visibleRows": 10,
+        "droppedFrames": 43,
+        "droppedFramesPeak": 43,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-4",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 0,
+        "max": 0,
+        "median": 0,
+        "p75": 0,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "fixed-passive",
+      "run": 1,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "scanOnEveryScroll",
+      "specimenScript": 32.30000000074506,
+      "lcp": {
+        "value": 596,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.13697178790214612,
+        "sessionCount": 8
+      },
+      "custom": {
+        "rowCount": 8000,
+        "scrollEvents": 10,
+        "wheelEvents": 10,
+        "rectReads": 80000,
+        "passes": 10,
+        "lastPassMs": 34.5,
+        "visibleRows": 10,
+        "droppedFrames": 20,
+        "droppedFramesPeak": 20,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-6",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 0,
+        "max": 0,
+        "median": 0,
+        "p75": 0,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "fixed-passive",
+      "run": 2,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "scanOnEveryScroll",
+      "specimenScript": 34.40000000037253,
+      "lcp": {
+        "value": 596,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.13697178790214612,
+        "sessionCount": 8
+      },
+      "custom": {
+        "rowCount": 8000,
+        "scrollEvents": 11,
+        "wheelEvents": 10,
+        "rectReads": 88000,
+        "passes": 11,
+        "lastPassMs": 45.6,
+        "visibleRows": 10,
+        "droppedFrames": 29,
+        "droppedFramesPeak": 29,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-7",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 0,
+        "max": 0,
+        "median": 0,
+        "p75": 0,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "fixed-passive",
+      "run": 3,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "scanOnEveryScroll",
+      "specimenScript": 32.399999998509884,
+      "lcp": {
+        "value": 596,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.13697178790214612,
+        "sessionCount": 8
+      },
+      "custom": {
+        "rowCount": 8000,
+        "scrollEvents": 11,
+        "wheelEvents": 10,
+        "rectReads": 88000,
+        "passes": 11,
+        "lastPassMs": 34.3,
+        "visibleRows": 10,
+        "droppedFrames": 27,
+        "droppedFramesPeak": 27,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-8",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 0,
+        "max": 0,
+        "median": 0,
+        "p75": 0,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "fixed-raf",
+      "run": 1,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "scanOnAnimationFrame",
+      "specimenScript": 39.40000000037253,
+      "lcp": {
+        "value": 596,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.13697178790214612,
+        "sessionCount": 9
+      },
+      "custom": {
+        "rowCount": 8000,
+        "scrollEvents": 10,
+        "wheelEvents": 10,
+        "rectReads": 80000,
+        "passes": 10,
+        "lastPassMs": 32.3,
+        "visibleRows": 10,
+        "droppedFrames": 20,
+        "droppedFramesPeak": 20,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-10",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 0,
+        "max": 0,
+        "median": 0,
+        "p75": 0,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "fixed-raf",
+      "run": 2,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "scanOnAnimationFrame",
+      "specimenScript": 43,
+      "lcp": {
+        "value": 596,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.13697178790214612,
+        "sessionCount": 11
+      },
+      "custom": {
+        "rowCount": 8000,
+        "scrollEvents": 11,
+        "wheelEvents": 10,
+        "rectReads": 88000,
+        "passes": 11,
+        "lastPassMs": 32.1,
+        "visibleRows": 10,
+        "droppedFrames": 27,
+        "droppedFramesPeak": 27,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-11",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 0,
+        "max": 0,
+        "median": 0,
+        "p75": 0,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "fixed-raf",
+      "run": 3,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "scanOnAnimationFrame",
+      "specimenScript": 35.69999999925494,
+      "lcp": {
+        "value": 596,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.13697178790214612,
+        "sessionCount": 13
+      },
+      "custom": {
+        "rowCount": 8000,
+        "scrollEvents": 11,
+        "wheelEvents": 10,
+        "rectReads": 88000,
+        "passes": 11,
+        "lastPassMs": 31.6,
+        "visibleRows": 10,
+        "droppedFrames": 18,
+        "droppedFramesPeak": 18,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-12",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 0,
+        "max": 0,
+        "median": 0,
+        "p75": 0,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "fixed-observer",
+      "run": 1,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": null,
+      "specimenScript": 0,
+      "lcp": {
+        "value": 596,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.13697178790214612,
+        "sessionCount": 15
+      },
+      "custom": {
+        "rowCount": 8000,
+        "scrollEvents": 0,
+        "wheelEvents": 0,
+        "rectReads": 0,
+        "passes": 11,
+        "lastPassMs": 0,
+        "visibleRows": 3,
+        "droppedFrames": 4,
+        "droppedFramesPeak": 4,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-14",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 0,
+        "max": 0,
+        "median": 0,
+        "p75": 0,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "fixed-observer",
+      "run": 2,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 596,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.13697178790214612,
+        "sessionCount": 16
+      },
+      "custom": {
+        "rowCount": 8000,
+        "scrollEvents": 0,
+        "wheelEvents": 0,
+        "rectReads": 0,
+        "passes": 11,
+        "lastPassMs": 0,
+        "visibleRows": 3,
+        "droppedFrames": 1,
+        "droppedFramesPeak": 1,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-15",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 0,
+        "max": 0,
+        "median": 0,
+        "p75": 0,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "04-unthrottled-events",
+      "mode": "fixed-observer",
+      "run": 3,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 596,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.13697178790214612,
+        "sessionCount": 17
+      },
+      "custom": {
+        "rowCount": 8000,
+        "scrollEvents": 0,
+        "wheelEvents": 0,
+        "rectReads": 0,
+        "passes": 11,
+        "lastPassMs": 0,
+        "visibleRows": 3,
+        "droppedFrames": 1,
+        "droppedFramesPeak": 1,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-16",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 0,
+        "max": 0,
+        "median": 0,
+        "p75": 0,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "broken",
+      "run": 1,
+      "totalInteractions": 1,
+      "inp": 16,
+      "isMaxNotP98": true,
+      "inputDelay": 0.40000000037252903,
+      "processing": 3.099999999627471,
+      "presentation": 12.5,
+      "duration": 16,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "pushDeviceBatch",
+      "specimenScript": 13.300000000745058,
+      "lcp": {
+        "value": 184,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.015024966530082355,
+        "sessionCount": 1
+      },
+      "custom": {
+        "deviceCount": 1000,
+        "pushIntervalMs": 50,
+        "batchSize": 200,
+        "batchesReceived": 48,
+        "batchesRendered": 48,
+        "rendersSkipped": 0,
+        "updatesApplied": 8714,
+        "lastRenderMs": 12.7,
+        "renderRatio": 1,
+        "droppedFrames": 223,
+        "droppedFramesPeak": 225,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-2",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 1,
+        "max": 16,
+        "median": 16,
+        "p75": 16,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "broken",
+      "run": 2,
+      "totalInteractions": 1,
+      "inp": 24,
+      "isMaxNotP98": true,
+      "inputDelay": 1.5,
+      "processing": 2.400000000372529,
+      "presentation": 20.09999999962747,
+      "duration": 24,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "pushDeviceBatch",
+      "specimenScript": 15.299999998882413,
+      "lcp": {
+        "value": 184,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.015024966530082355,
+        "sessionCount": 3
+      },
+      "custom": {
+        "batchesReceived": 47,
+        "batchesRendered": 47,
+        "rendersSkipped": 0,
+        "updatesApplied": 8534,
+        "deviceCount": 1000,
+        "pushIntervalMs": 50,
+        "lastRenderMs": 14.4,
+        "renderRatio": 1,
+        "droppedFrames": 237,
+        "droppedFramesPeak": 237,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-3",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 1,
+        "max": 24,
+        "median": 24,
+        "p75": 24,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "broken",
+      "run": 3,
+      "totalInteractions": 1,
+      "inp": 16,
+      "isMaxNotP98": true,
+      "inputDelay": 1,
+      "processing": 2,
+      "presentation": 13,
+      "duration": 16,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "pushDeviceBatch",
+      "specimenScript": 15.099999999627471,
+      "lcp": {
+        "value": 184,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.015024966530082355,
+        "sessionCount": 5
+      },
+      "custom": {
+        "batchesReceived": 50,
+        "batchesRendered": 50,
+        "rendersSkipped": 0,
+        "updatesApplied": 9083,
+        "deviceCount": 1000,
+        "pushIntervalMs": 50,
+        "lastRenderMs": 14,
+        "renderRatio": 1,
+        "droppedFrames": 231,
+        "droppedFramesPeak": 231,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-4",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 1,
+        "max": 16,
+        "median": 16,
+        "p75": 16,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "fixed-batch",
+      "run": 1,
+      "totalInteractions": 1,
+      "inp": 16,
+      "isMaxNotP98": true,
+      "inputDelay": 1.599999999627471,
+      "processing": 3.099999999627471,
+      "presentation": 11.300000000745058,
+      "duration": 16,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "renderOnFrame",
+      "specimenScript": 13.299999998882413,
+      "lcp": {
+        "value": 184,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.015024966530082355,
+        "sessionCount": 7
+      },
+      "custom": {
+        "batchesReceived": 54,
+        "batchesRendered": 48,
+        "rendersSkipped": 0,
+        "updatesApplied": 9466,
+        "deviceCount": 1000,
+        "pushIntervalMs": 50,
+        "lastRenderMs": 12.3,
+        "renderRatio": 0.91,
+        "droppedFrames": 211,
+        "droppedFramesPeak": 219,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-6",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 1,
+        "max": 16,
+        "median": 16,
+        "p75": 16,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "fixed-batch",
+      "run": 2,
+      "totalInteractions": 1,
+      "inp": 24,
+      "isMaxNotP98": true,
+      "inputDelay": 1.299999998882413,
+      "processing": 1.900000000372529,
+      "presentation": 20.800000000745058,
+      "duration": 24,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "renderOnFrame",
+      "specimenScript": 14.099999999627471,
+      "lcp": {
+        "value": 184,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.015024966530082355,
+        "sessionCount": 9
+      },
+      "custom": {
+        "batchesReceived": 46,
+        "batchesRendered": 45,
+        "rendersSkipped": 0,
+        "updatesApplied": 8170,
+        "deviceCount": 1000,
+        "pushIntervalMs": 50,
+        "lastRenderMs": 12.2,
+        "renderRatio": 1,
+        "droppedFrames": 222,
+        "droppedFramesPeak": 222,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-7",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 1,
+        "max": 24,
+        "median": 24,
+        "p75": 24,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "fixed-batch",
+      "run": 3,
+      "totalInteractions": 1,
+      "inp": 16,
+      "isMaxNotP98": true,
+      "inputDelay": 1,
+      "processing": 2.700000001117587,
+      "presentation": 12.299999998882413,
+      "duration": 16,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "renderOnFrame",
+      "specimenScript": 13.900000000372529,
+      "lcp": {
+        "value": 184,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.015024966530082355,
+        "sessionCount": 11
+      },
+      "custom": {
+        "batchesReceived": 47,
+        "batchesRendered": 46,
+        "rendersSkipped": 0,
+        "updatesApplied": 8353,
+        "deviceCount": 1000,
+        "pushIntervalMs": 50,
+        "lastRenderMs": 12.5,
+        "renderRatio": 1,
+        "droppedFrames": 223,
+        "droppedFramesPeak": 223,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-8",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 1,
+        "max": 16,
+        "median": 16,
+        "p75": 16,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "fixed-granular",
+      "run": 1,
+      "totalInteractions": 1,
+      "inp": 16,
+      "isMaxNotP98": true,
+      "inputDelay": 0.5,
+      "processing": 1.900000000372529,
+      "presentation": 13.599999999627471,
+      "duration": 16,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 16.299999998882413,
+      "lcp": {
+        "value": 184,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.015024966530082355,
+        "sessionCount": 13
+      },
+      "custom": {
+        "batchesReceived": 100,
+        "batchesRendered": 99,
+        "rendersSkipped": 0,
+        "updatesApplied": 17943,
+        "deviceCount": 1000,
+        "pushIntervalMs": 50,
+        "lastRenderMs": 2.1,
+        "renderRatio": 1,
+        "droppedFrames": 4,
+        "droppedFramesPeak": 8,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-10",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 1,
+        "max": 16,
+        "median": 16,
+        "p75": 16,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "fixed-granular",
+      "run": 2,
+      "totalInteractions": 1,
+      "inp": 16,
+      "isMaxNotP98": true,
+      "inputDelay": 1.5,
+      "processing": 2.699999999254942,
+      "presentation": 11.800000000745058,
+      "duration": 16,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 17.300000000745058,
+      "lcp": {
+        "value": 184,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.015024966530082355,
+        "sessionCount": 15
+      },
+      "custom": {
+        "batchesReceived": 100,
+        "batchesRendered": 99,
+        "rendersSkipped": 0,
+        "updatesApplied": 17943,
+        "deviceCount": 1000,
+        "pushIntervalMs": 50,
+        "lastRenderMs": 1.7,
+        "renderRatio": 1,
+        "droppedFrames": 3,
+        "droppedFramesPeak": 7,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-11",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 1,
+        "max": 16,
+        "median": 16,
+        "p75": 16,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "fixed-granular",
+      "run": 3,
+      "totalInteractions": 1,
+      "inp": 16,
+      "isMaxNotP98": true,
+      "inputDelay": 1.5,
+      "processing": 2.5,
+      "presentation": 12,
+      "duration": 16,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 19.40000000037253,
+      "lcp": {
+        "value": 184,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.015024966530082355,
+        "sessionCount": 17
+      },
+      "custom": {
+        "batchesReceived": 100,
+        "batchesRendered": 99,
+        "rendersSkipped": 0,
+        "updatesApplied": 17943,
+        "deviceCount": 1000,
+        "pushIntervalMs": 50,
+        "lastRenderMs": 2.4,
+        "renderRatio": 1,
+        "droppedFrames": 1,
+        "droppedFramesPeak": 4,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-12",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 1,
+        "max": 16,
+        "median": 16,
+        "p75": 16,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "fixed-backpressure",
+      "run": 1,
+      "totalInteractions": 1,
+      "inp": 24,
+      "isMaxNotP98": true,
+      "inputDelay": 1.300000000745058,
+      "processing": 1.599999999627471,
+      "presentation": 21.09999999962747,
+      "duration": 24,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 14.599999999627471,
+      "lcp": {
+        "value": 184,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.015024966530082355,
+        "sessionCount": 19
+      },
+      "custom": {
+        "batchesReceived": 100,
+        "batchesRendered": 99,
+        "rendersSkipped": 0,
+        "updatesApplied": 17943,
+        "deviceCount": 1000,
+        "pushIntervalMs": 50,
+        "lastRenderMs": 2.4,
+        "renderRatio": 1,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 3,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-14",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 1,
+        "max": 24,
+        "median": 24,
+        "p75": 24,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "fixed-backpressure",
+      "run": 2,
+      "totalInteractions": 1,
+      "inp": 24,
+      "isMaxNotP98": true,
+      "inputDelay": 1.199999999254942,
+      "processing": 1.400000000372529,
+      "presentation": 21.40000000037253,
+      "duration": 24,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 18.40000000037253,
+      "lcp": {
+        "value": 184,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.015024966530082355,
+        "sessionCount": 21
+      },
+      "custom": {
+        "batchesReceived": 100,
+        "batchesRendered": 99,
+        "rendersSkipped": 0,
+        "updatesApplied": 17943,
+        "deviceCount": 1000,
+        "pushIntervalMs": 50,
+        "lastRenderMs": 2.3,
+        "renderRatio": 1,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 4,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-15",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 1,
+        "max": 24,
+        "median": 24,
+        "p75": 24,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "06-rerender-storm",
+      "mode": "fixed-backpressure",
+      "run": 3,
+      "totalInteractions": 1,
+      "inp": 16,
+      "isMaxNotP98": true,
+      "inputDelay": 1,
+      "processing": 3,
+      "presentation": 12,
+      "duration": 16,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 20.700000001117587,
+      "lcp": {
+        "value": 184,
+        "el": "p"
+      },
+      "cls": {
+        "value": 0.015024966530082355,
+        "sessionCount": 23
+      },
+      "custom": {
+        "batchesReceived": 100,
+        "batchesRendered": 99,
+        "rendersSkipped": 0,
+        "updatesApplied": 17943,
+        "deviceCount": 1000,
+        "pushIntervalMs": 50,
+        "lastRenderMs": 2.7,
+        "renderRatio": 1,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 4,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-16",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 1,
+        "max": 16,
+        "median": 16,
+        "p75": 16,
+        "spread": 0
+      },
+      "round": 1
+    },
+    {
+      "specimenId": "02-long-list",
+      "mode": "broken",
+      "run": 1,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 128.30000000074506,
+      "lcp": {
+        "value": 1396,
+        "el": "p"
+      },
+      "cls": null,
+      "custom": {
+        "itemCount": 5000,
+        "renderedItems": 5000,
+        "domNodeCount": 40021,
+        "rowHeightPx": 120,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-2",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "02-long-list",
+      "mode": "fixed-content-visibility",
+      "run": 1,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": null,
+      "specimenScript": 0,
+      "lcp": {
+        "value": 592,
+        "el": "p"
+      },
+      "cls": null,
+      "custom": {
+        "itemCount": 5000,
+        "renderedItems": 5000,
+        "domNodeCount": 40021,
+        "rowHeightPx": 120,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-3",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "02-long-list",
+      "mode": "fixed-virtual",
+      "run": 1,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 0,
+      "lcp": {
+        "value": 668,
+        "el": "p"
+      },
+      "cls": null,
+      "custom": {
+        "itemCount": 5000,
+        "renderedItems": 15,
+        "domNodeCount": 141,
+        "rowHeightPx": 120,
+        "droppedFrames": 8,
+        "droppedFramesPeak": 8,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-4",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "02-long-list",
+      "mode": "broken",
+      "run": 2,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 117.40000000037253,
+      "lcp": {
+        "value": 1356,
+        "el": "p"
+      },
+      "cls": null,
+      "custom": {
+        "itemCount": 5000,
+        "renderedItems": 5000,
+        "domNodeCount": 40021,
+        "rowHeightPx": 120,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-5",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "02-long-list",
+      "mode": "fixed-content-visibility",
+      "run": 2,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": null,
+      "specimenScript": 0,
+      "lcp": {
+        "value": 612,
+        "el": "p"
+      },
+      "cls": null,
+      "custom": {
+        "itemCount": 5000,
+        "renderedItems": 5000,
+        "domNodeCount": 40021,
+        "rowHeightPx": 120,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-6",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "02-long-list",
+      "mode": "fixed-virtual",
+      "run": 2,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 0,
+      "lcp": {
+        "value": 680,
+        "el": "p"
+      },
+      "cls": null,
+      "custom": {
+        "itemCount": 5000,
+        "renderedItems": 15,
+        "domNodeCount": 141,
+        "rowHeightPx": 120,
+        "droppedFrames": 8,
+        "droppedFramesPeak": 8,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-7",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "02-long-list",
+      "mode": "broken",
+      "run": 3,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 118.20000000111759,
+      "lcp": {
+        "value": 1360,
+        "el": "p"
+      },
+      "cls": null,
+      "custom": {
+        "itemCount": 5000,
+        "renderedItems": 5000,
+        "domNodeCount": 40021,
+        "rowHeightPx": 120,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-8",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "02-long-list",
+      "mode": "fixed-content-visibility",
+      "run": 3,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": null,
+      "specimenScript": 0,
+      "lcp": {
+        "value": 576,
+        "el": "p"
+      },
+      "cls": null,
+      "custom": {
+        "itemCount": 5000,
+        "renderedItems": 5000,
+        "domNodeCount": 40021,
+        "rowHeightPx": 120,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-9",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "02-long-list",
+      "mode": "fixed-virtual",
+      "run": 3,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "",
+      "specimenScript": 0,
+      "lcp": {
+        "value": 724,
+        "el": "p"
+      },
+      "cls": null,
+      "custom": {
+        "itemCount": 5000,
+        "renderedItems": 15,
+        "domNodeCount": 141,
+        "rowHeightPx": 120,
+        "droppedFrames": 8,
+        "droppedFramesPeak": 8,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-10",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "05-layout-shift",
+      "mode": "broken",
+      "run": 1,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 72,
+        "el": "div#ls-prose.ls-prose"
+      },
+      "cls": {
+        "value": 0.12658805371414664,
+        "sessionCount": 2
+      },
+      "custom": {
+        "shiftSourcesFired": 3,
+        "imageAtMs": 300,
+        "fontAtMs": 900,
+        "bannerAtMs": 1500,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-2",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "05-layout-shift",
+      "mode": "fixed",
+      "run": 1,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 52,
+        "el": "p"
+      },
+      "cls": null,
+      "custom": {
+        "shiftSourcesFired": 3,
+        "imageAtMs": 300,
+        "fontAtMs": 900,
+        "bannerAtMs": 1500,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-3",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "05-layout-shift",
+      "mode": "broken",
+      "run": 2,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 48,
+        "el": "div#ls-prose.ls-prose"
+      },
+      "cls": {
+        "value": 0.11192911679987019,
+        "sessionCount": 2
+      },
+      "custom": {
+        "shiftSourcesFired": 3,
+        "imageAtMs": 300,
+        "fontAtMs": 900,
+        "bannerAtMs": 1500,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-4",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "05-layout-shift",
+      "mode": "fixed",
+      "run": 2,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": null,
+      "specimenScript": 0,
+      "lcp": {
+        "value": 52,
+        "el": "p"
+      },
+      "cls": null,
+      "custom": {
+        "shiftSourcesFired": 3,
+        "imageAtMs": 300,
+        "fontAtMs": 900,
+        "bannerAtMs": 1500,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-5",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "05-layout-shift",
+      "mode": "broken",
+      "run": 3,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 72,
+        "el": "div#ls-prose.ls-prose"
+      },
+      "cls": {
+        "value": 0.12658805371414664,
+        "sessionCount": 2
+      },
+      "custom": {
+        "shiftSourcesFired": 3,
+        "imageAtMs": 300,
+        "fontAtMs": 900,
+        "bannerAtMs": 1500,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-6",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    },
+    {
+      "specimenId": "05-layout-shift",
+      "mode": "fixed",
+      "run": 3,
+      "totalInteractions": 0,
+      "inp": null,
+      "isMaxNotP98": true,
+      "inputDelay": null,
+      "processing": null,
+      "presentation": null,
+      "duration": null,
+      "presentationClamped": null,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 52,
+        "el": "p"
+      },
+      "cls": null,
+      "custom": {
+        "shiftSourcesFired": 3,
+        "imageAtMs": 300,
+        "fontAtMs": 900,
+        "bannerAtMs": 1500,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-7",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": null,
+      "round": 2
+    }
+  ],
+  "superseded": [
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "broken",
+      "run": 1,
+      "totalInteractions": 10,
+      "inp": 144,
+      "isMaxNotP98": true,
+      "inputDelay": 0.900000000372529,
+      "processing": 136.5,
+      "presentation": 6.599999999627471,
+      "duration": 144,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 125.60000000149012,
+      "lcp": {
+        "value": 136,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.001989697265625,
+        "sessionCount": 1
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 10,
+        "cancelledSorts": 0,
+        "sortMs": 115.8,
+        "droppedFrames": 57,
+        "droppedFramesPeak": 57,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-2",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 144,
+        "median": 124,
+        "p75": 128,
+        "spread": 0.1935483870967742
+      },
+      "round": 1,
+      "supersededByRound": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "broken",
+      "run": 2,
+      "totalInteractions": 10,
+      "inp": 120,
+      "isMaxNotP98": true,
+      "inputDelay": 2.599999999627471,
+      "processing": 111.59999999962747,
+      "presentation": 5.800000000745058,
+      "duration": 120,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 106.69999999925494,
+      "lcp": {
+        "value": 136,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0021969707031250013,
+        "sessionCount": 2
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 10,
+        "cancelledSorts": 0,
+        "sortMs": 99.8,
+        "droppedFrames": 49,
+        "droppedFramesPeak": 49,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-3",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 120,
+        "median": 112,
+        "p75": 112,
+        "spread": 0.14285714285714285
+      },
+      "round": 1,
+      "supersededByRound": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "broken",
+      "run": 3,
+      "totalInteractions": 10,
+      "inp": 128,
+      "isMaxNotP98": true,
+      "inputDelay": 0.7000000011175871,
+      "processing": 116.59999999962747,
+      "presentation": 10.699999999254942,
+      "duration": 128,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 110.29999999888241,
+      "lcp": {
+        "value": 136,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0021969707031250013,
+        "sessionCount": 3
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 10,
+        "cancelledSorts": 0,
+        "sortMs": 107.9,
+        "droppedFrames": 52,
+        "droppedFramesPeak": 52,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-4",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 128,
+        "median": 120,
+        "p75": 120,
+        "spread": 0.2
+      },
+      "round": 1,
+      "supersededByRound": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-yield",
+      "run": 1,
+      "totalInteractions": 10,
+      "inp": 32,
+      "isMaxNotP98": true,
+      "inputDelay": 0.599999999627471,
+      "processing": 8.5,
+      "presentation": 22.90000000037253,
+      "duration": 32,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 136,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0021969707031250013,
+        "sessionCount": 4
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 1,
+        "cancelledSorts": 9,
+        "sortMs": 127.6,
+        "droppedFrames": 1,
+        "droppedFramesPeak": 1,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-6",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 32,
+        "median": 28,
+        "p75": 32,
+        "spread": 0.5714285714285714
+      },
+      "round": 1,
+      "supersededByRound": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-yield",
+      "run": 2,
+      "totalInteractions": 10,
+      "inp": 32,
+      "isMaxNotP98": true,
+      "inputDelay": 0.7000000011175871,
+      "processing": 7.5,
+      "presentation": 23.799999998882413,
+      "duration": 32,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 136,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0021969707031250013,
+        "sessionCount": 5
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 1,
+        "cancelledSorts": 9,
+        "sortMs": 124.9,
+        "droppedFrames": 0,
+        "droppedFramesPeak": 0,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-7",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 32,
+        "median": 32,
+        "p75": 32,
+        "spread": 0.25
+      },
+      "round": 1,
+      "supersededByRound": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-yield",
+      "run": 3,
+      "totalInteractions": 10,
+      "inp": 32,
+      "isMaxNotP98": true,
+      "inputDelay": 2.799999998882413,
+      "processing": 7.800000000745058,
+      "presentation": 21.40000000037253,
+      "duration": 32,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": null,
+      "forcedFn": null,
+      "specimenScript": null,
+      "lcp": {
+        "value": 136,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0021969707031250013,
+        "sessionCount": 5
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 1,
+        "cancelledSorts": 9,
+        "sortMs": 132.7,
+        "droppedFrames": 1,
+        "droppedFramesPeak": 1,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-8",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 32,
+        "median": 28,
+        "p75": 32,
+        "spread": 0.2857142857142857
+      },
+      "round": 1,
+      "supersededByRound": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-worker",
+      "run": 1,
+      "totalInteractions": 10,
+      "inp": 72,
+      "isMaxNotP98": true,
+      "inputDelay": 0.6000000014901161,
+      "processing": 63.79999999888241,
+      "presentation": 7.599999999627471,
+      "duration": 72,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 55.80000000074506,
+      "lcp": {
+        "value": 136,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0021969707031250013,
+        "sessionCount": 7
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 1,
+        "cancelledSorts": 9,
+        "workerSerializeMs": 56.1,
+        "workerTransferMs": 563.2,
+        "workerSortMs": 31.3,
+        "workerRoundTripMs": 595.4,
+        "droppedFrames": 19,
+        "droppedFramesPeak": 19,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-10",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 72,
+        "median": 64,
+        "p75": 64,
+        "spread": 0.25
+      },
+      "round": 1,
+      "supersededByRound": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-worker",
+      "run": 2,
+      "totalInteractions": 10,
+      "inp": 72,
+      "isMaxNotP98": true,
+      "inputDelay": 1.599999999627471,
+      "processing": 62.19999999925494,
+      "presentation": 8.200000001117587,
+      "duration": 72,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 49.5,
+      "lcp": {
+        "value": 136,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0021969707031250013,
+        "sessionCount": 7
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 1,
+        "cancelledSorts": 9,
+        "workerSerializeMs": 50.1,
+        "workerTransferMs": 533.5,
+        "workerSortMs": 29.2,
+        "workerRoundTripMs": 564.8,
+        "droppedFrames": 17,
+        "droppedFramesPeak": 17,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-11",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 72,
+        "median": 56,
+        "p75": 64,
+        "spread": 0.2857142857142857
+      },
+      "round": 1,
+      "supersededByRound": 2
+    },
+    {
+      "specimenId": "01-main-thread-block",
+      "mode": "fixed-worker",
+      "run": 3,
+      "totalInteractions": 10,
+      "inp": 64,
+      "isMaxNotP98": true,
+      "inputDelay": 0.7999999988824129,
+      "processing": 58.20000000111759,
+      "presentation": 5,
+      "duration": 64,
+      "presentationClamped": false,
+      "forcedSamples": [],
+      "forcedMedian": null,
+      "forcedPeak": 0,
+      "forcedFn": "sortOrdersOnClick",
+      "specimenScript": 57.09999999962747,
+      "lcp": {
+        "value": 136,
+        "el": "h1"
+      },
+      "cls": {
+        "value": 0.0021969707031250013,
+        "sessionCount": 8
+      },
+      "custom": {
+        "orderCount": 50000,
+        "completedSorts": 1,
+        "cancelledSorts": 9,
+        "workerSerializeMs": 55.9,
+        "workerTransferMs": 565.8,
+        "workerSortMs": 32.7,
+        "workerRoundTripMs": 599.3,
+        "droppedFrames": 17,
+        "droppedFramesPeak": 17,
+        "clsIgnoredByInput": 0
+      },
+      "runId": "run-12",
+      "cpuThrottle": "4x",
+      "refreshHz": 60,
+      "buildId": "0.1.0-ms0k07ln",
+      "stats": {
+        "n": 10,
+        "max": 64,
+        "median": 64,
+        "p75": 64,
+        "spread": 0.125
+      },
+      "round": 1,
+      "supersededByRound": 2
+    }
+  ]
+}

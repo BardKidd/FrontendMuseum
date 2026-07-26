@@ -98,7 +98,14 @@ export type MetricKey =
   | 'cls'
   | 'custom.domNodeCount'
   | 'custom.renderedItems'
-  | 'custom.droppedFrames';
+  | 'custom.droppedFrames'
+  /**
+   * Phase 2 加的（加值不改語意）。`droppedFrames` 是 5 秒**滾動窗**，
+   * 負載結束後它會隨時間衰減 —— 而 `RunResult.customFinal` 取的是本輪最後一批 metrics，
+   * 於是「跑完 10 秒串流、停下來、按重跑」會把一個已經衰減過的數字寫進歷史。
+   * peak 是本輪內的最大值，不隨時間掉，跨輪比較要用它。
+   */
+  | 'custom.droppedFramesPeak';
 
 export interface SpecimenMeta {
   id: SpecimenId;
@@ -128,6 +135,16 @@ export interface SpecimenMeta {
     intervalMs: number | null;
     /** '每次節拍亮起時點一下，共十次' */
     instruction: string;
+    /**
+     * 這個間隔是**機器節拍**，人手做不到（2026-07-26 新增欄位）。
+     *
+     * 為真時外殼**不渲染節拍器**：節拍器的用途是替人打拍子，而人照著它做出來的
+     * 是另一個實驗；更嚴重的是它的 `setInterval` + 每拍一次 `setState` 會落在
+     * 待量的那一段裡 —— 標本 #1 的兇手段正是 `presentation`，節拍器等於直接往裡面加料。
+     *
+     * 省略 = false = 人手做得到，照舊渲染節拍器。加欄位不改既有語意。
+     */
+    machinePaced?: boolean;
   };
 
   /** 凍結。CLS 與 LCP 都依賴 viewport，改這裡等於讓歷史數字作廢 */
@@ -244,6 +261,25 @@ export interface RunResult {
   /** 本輪所有非 warmup 的互動 */
   samples: InteractionSample[];
   stats: RunStats;
+
+  /*
+   * ───── 以下三個是 Phase 2 加的欄位（「只准加欄位，不准改語意」的那個加）─────
+   *
+   * 為什麼非加不可：`samples` 與 `stats` 全部建立在 INP 之上，而**捲動與 wheel
+   * 依規格不產生 `interactionId`**（INP 明文排除捲動）。標本 #4／#6 的主指標是
+   * `custom.droppedFrames`，它們一輪下來會是零筆互動樣本 ——
+   * 沒有這三個欄位，那兩個標本的「連跑三輪」永遠不會有東西可以比，
+   * §1 原則 4 就從判準退化成宣稱。
+   *
+   * 都是可選欄位，先前的 RunResult 不受影響，歷史數字不作廢。
+   */
+
+  /** 本輪最後一批的 custom 快照（`droppedFrames` / `domNodeCount` 靠它進歷史）*/
+  customFinal?: Record<string, number>;
+  /** 本輪的 LCP 終值。B 類標本每個 mode 一份 document，所以這是 per-run 的 */
+  lcpFinal?: LcpSample | null;
+  /** 本輪的 CLS 終值 */
+  clsFinal?: ClsSample | null;
 }
 
 export interface RunConditions {
