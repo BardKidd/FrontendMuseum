@@ -307,10 +307,10 @@ export const UNTHROTTLED_EVENTS_META: SpecimenMeta = {
 /**
  * 標本 #5 —— 版面位移（CLS）。B 類。
  *
- * ⚠️ `protocol.action` 的四個值（click / scroll / type / stream）**沒有一個的意思是
- * 「載入後靜置觀察」**。這裡選 stream 是最接近的一個（位移由計時器自己發生，
- * 操作者不動手），但它其實是協定詞彙的一個缺口，登記在此而不是默默用 click 帶過 ——
- * 用 click 會讓面板的操作程序寫著「點十次」，而這個標本一點都不能點。
+ * `action: 'idle'`（載入後靜置觀察，零互動）是 2026-07-26 補進協定的詞彙。
+ * 在此之前這裡登記的是 'stream'（當時的四個值沒有一個是「靜置觀察」，選最接近的
+ * 並把缺口寫明），而驅動器（tools/reproducibility.mjs）同一個程序寫的是 'idle' ——
+ * 同一件事兩邊叫不同名字。缺口補上後兩邊同源；此臂實際執行的程序沒有變。
  */
 export const LAYOUT_SHIFT_META: SpecimenMeta = {
   id: '05-layout-shift',
@@ -342,7 +342,7 @@ export const LAYOUT_SHIFT_META: SpecimenMeta = {
   culprit: 'cls',
 
   protocol: {
-    action: 'stream',
+    action: 'idle',
     repetitions: 1,
     intervalMs: null,
     instruction:

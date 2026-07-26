@@ -129,9 +129,18 @@ export interface SpecimenMeta {
    * UI 照這個發指令（做成節拍器），文章照這個描述條件。
    */
   protocol: {
-    action: 'click' | 'scroll' | 'type' | 'stream';
+    /**
+     * 'idle'（載入後靜置觀察，零互動）是 2026-07-26 補進來的值 —— 加值不改既有語意。
+     * 在此之前 #5 只能借用最接近的 'stream' 並把缺口登記在註解裡，
+     * 而驅動器（tools/reproducibility.mjs）同一個程序寫的是 'idle'，兩邊詞彙自此同源。
+     */
+    action: 'click' | 'scroll' | 'type' | 'stream' | 'idle';
     repetitions: number;
-    /** 每次之間的間隔；null = 盡快連續（這本身也是一種凍結） */
+    /**
+     * 每次之間的間隔。null 的意思依 action 而異：click／scroll／type 是「盡快連續」
+     * （這本身也是一種凍結）；stream 是單次觸發後由標本自行計時、idle 是零互動，
+     * 兩者沒有節拍可言 —— 外殼的操作程序區照 action 分開解釋，不印「盡快連續」。
+     */
     intervalMs: number | null;
     /** '每次節拍亮起時點一下，共十次' */
     instruction: string;

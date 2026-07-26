@@ -609,10 +609,18 @@ export function App() {
             <h3 className="shell-h">操作程序（凍結變因，spec §5.1 第 4 項）</h3>
             <p className="shell-instruction">{meta.protocol.instruction}</p>
             <p className="shell-note">
+              {/* intervalMs null 不一定是「盡快連續」：#5（idle）是「靜置三秒不要碰」、
+                  #6（stream）是「按一次然後放手」。這裡曾對兩者都印「盡快連續（不要等
+                  畫面回應）」—— 與 instruction 相反的指示，人手複驗會照著做錯事。
+                  「盡快連續」只對 click／scroll／type 的 null 成立（protocol.ts 的語意）。 */}
               動作 {meta.protocol.action} · 次數 {meta.protocol.repetitions} · 間隔{' '}
-              {meta.protocol.intervalMs === null
-                ? '盡快連續（不要等畫面回應）'
-                : `${meta.protocol.intervalMs}ms`}
+              {meta.protocol.intervalMs !== null
+                ? `${meta.protocol.intervalMs}ms`
+                : meta.protocol.action === 'idle'
+                  ? '—（零互動，沒有間隔可言）'
+                  : meta.protocol.action === 'stream'
+                    ? '—（單次觸發，之後由標本自行計時）'
+                    : '盡快連續（不要等畫面回應）'}
             </p>
             <p className="shell-pace">
               {/* 機器節拍的標本不渲染節拍器：它的 setInterval + 每拍一次 setState
@@ -626,7 +634,14 @@ export function App() {
                 />
               )}{' '}
               <span className="shell-count">
-                已記錄 {done} / {meta.protocol.repetitions} 次
+                {/* stream 的 done 數的是「按開始」那一下 —— repetitions 是 1，按下的
+                    瞬間就顯示 1/1，而量測窗才剛開始。idle 的 done 恆為 0，印 0/1
+                    會永遠像沒達標。兩者都不能沿用「已記錄 n / N」的達標語意。 */}
+                {meta.protocol.action === 'idle'
+                  ? '零互動標本 —— 不點不捲，樣本由標本自動記錄'
+                  : meta.protocol.action === 'stream'
+                    ? `已觸發 ${done} / ${meta.protocol.repetitions} 次 —— 量測窗這時才開始，由標本自行計時（外殼無從得知它何時結束）`
+                    : `已記錄 ${done} / ${meta.protocol.repetitions} 次`}
               </span>
             </p>
           </section>
