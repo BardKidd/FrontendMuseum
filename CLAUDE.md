@@ -25,6 +25,9 @@ npm run build       # typecheck + vite build
 
 ### 驗收與量測（先讓 preview 在另一個終端機跑起來）
 
+開 `http://localhost:4173/` 是**首頁／標本索引**；**量測台在 `/measure.html`**
+（2026-07-26 對調，`tools/*.mjs` 的 `URL_SHELL` 與 `vite.config.ts` 的 `input.measure` 必須同步）。
+
 ```bash
 node tools/acceptance.mjs                    # spec §5.6 的 13 條驗收，全綠才算過
 node tools/reproducibility.mjs               # 全部標本，每個 mode 三輪

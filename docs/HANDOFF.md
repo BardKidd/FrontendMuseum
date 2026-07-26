@@ -68,6 +68,19 @@
 「這篇文章講的是下面那八格」—— #5 那一格已翻案、#6 的兩個結論也翻案。
 **第二篇文章的骨架就是這件事**：修完再量一次，八格裡有幾格翻案。
 
+## 路由（2026-07-26 對調）
+
+| URL | 內容 |
+|---|---|
+| `/` | **首頁／標本索引**（推廣入口，Hallmark 產的 Stat-Led + Almanac） |
+| `/measure.html` | **量測台**（外殼 + iframe，仍是零 CSS 的 `<pre>` 面板） |
+| `/specimens/*.html` | 標本頁，不受影響 |
+
+⚠️ 三處必須同步，不同步的話量測會開到首頁去：
+`vite.config.ts` 的 `input.measure`、`tools/acceptance.mjs` 與 `tools/reproducibility.mjs` 的 `URL_SHELL`。
+對調後實跑驗證：`npm run acceptance` **13 / 13**，驅動器煙霧測（校準標本三輪）錨點 A 對得上
+（`busy-300` → processing 300.8~303.1ms，登記 300）。
+
 ## 下一步：Phase 3
 
 `spec:1258-1262`：

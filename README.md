@@ -14,7 +14,8 @@ npm install
 npm run measure     # build + preview，量測一律走這個
 ```
 
-開 http://localhost:4173 。**需要 Chromium 系瀏覽器**（Event Timing 的 `interactionId` 與
+開 http://localhost:4173 是**首頁／標本索引**；量測台在 http://localhost:4173/measure.html 。
+**需要 Chromium 系瀏覽器**（Event Timing 的 `interactionId` 與
 Long Animation Frames 都是 Chromium-only），這是明文宣告的限制，不做跨瀏覽器降級。
 
 其他指令：

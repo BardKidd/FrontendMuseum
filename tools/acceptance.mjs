@@ -6,7 +6,8 @@ import { spawn } from 'node:child_process';
 
 const CHROME = '/usr/bin/brave-browser';
 const PORT = 9334;
-const URL_SHELL = 'http://localhost:4173/';
+// 2026-07-26：外殼從 `/` 搬到 `/measure.html`（`/` 現在是首頁／標本索引）
+const URL_SHELL = 'http://localhost:4173/measure.html';
 const PROFILE = '/tmp/perf-museum-acceptance-profile';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

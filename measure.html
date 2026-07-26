@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 空 favicon：不寫的話瀏覽器每次載入都去要 /favicon.ico 拿一個 404，
+         console 有紅字會讓人以為量測程式壞了 -->
+    <link rel="icon" href="data:," />
+    <title>量測台 · 前端效能病理標本館</title>
+    <!--
+      這裡沒有任何 <link rel="stylesheet">，是刻意的：
+      面板整個是 <pre> 純文字（spec §5.3）。排版屬於 Phase 3 的 shell-visual 工作線，
+      動它之前要先對照 docs/superpowers/plans/baseline-shell-cost.md 的基線，
+      證明外殼沒有變成污染源。
+
+      ⚠️ 2026-07-26：這一頁從 `/` 搬到 `/measure.html`，`/` 現在是首頁／標本索引。
+      tools/acceptance.mjs 與 tools/reproducibility.mjs 的 URL_SHELL 必須指到這裡。
+    -->
+  </head>
+  <body>
+    <!-- 回首頁。刻意放在 #root 外面而且零樣式：它不進 React 樹、不參與任何重繪，
+         所以不會落進待量的那一段。改動之後 npm run acceptance 仍是 13 / 13。 -->
+    <a href="/">← 回標本館首頁</a>
+    <div id="root"></div>
+    <script type="module" src="/src/shell/main.tsx"></script>
+  </body>
+</html>

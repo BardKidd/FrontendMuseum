@@ -22,7 +22,9 @@ import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 
 const CHROME = '/opt/brave.com/brave/brave';
 const PORT = 9335;
-const URL_SHELL = 'http://localhost:4173/';
+// 2026-07-26：外殼從 `/` 搬到 `/measure.html`（`/` 現在是首頁／標本索引）。
+// 這一行與 vite.config.ts 的 input.measure 必須同步，否則量測會開到首頁去。
+const URL_SHELL = 'http://localhost:4173/measure.html';
 const PROFILE = '/tmp/perf-museum-repro-profile';
 const THROTTLE_RATE = 4;
 const THROTTLE_LABEL = '4x';
