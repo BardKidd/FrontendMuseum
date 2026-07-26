@@ -70,13 +70,48 @@ async function realClick(pt) {
   await S('Input.dispatchMouseEvent', { type: 'mouseReleased', x: pt.x, y: pt.y, button: 'left', buttons: 0, clickCount: 1 });
 }
 /** 標本按鈕（在 iframe 內，同源所以可以穿過去算座標） */
-const ptIn = (sel) => evaluate(`(() => {
-  const f = document.querySelector('iframe');
-  const fr = f.getBoundingClientRect();
-  const b = f.contentDocument.querySelector('${sel}').getBoundingClientRect();
-  f.contentWindow.scrollTo(0, 0);
-  return { x: fr.left + b.left + b.width/2, y: fr.top + b.top + b.height/2 };
-})()`);
+/**
+ * iframe 內元素的 viewport 座標。
+ *
+ * ⚠️ **先把 iframe 本身捲進外殼視窗**，否則座標算得出來、點擊卻打空。
+ *
+ * `ptShell()` 找外殼按鈕時會 `scrollIntoView({ block: 'center' })`。
+ * 2026-07-26 外殼改成雙欄之後，捲到「重跑」會把 iframe 推出視窗頂端：
+ *
+ *   起始            scrollY=0    iframeTop=724   目標點 y=746   在視窗內
+ *   捲到「重跑」後  scrollY=840  iframeTop=-116  目標點 y=-94   在視窗外
+ *                                                              elementFromPoint = null
+ *
+ * 於是之後每一發 `Input.dispatchMouseEvent` 都打在沒有東西的地方，該輪零互動、
+ * 不進歷史 —— 症狀是驗收第 16 條只收到 2 輪而不是 3 輪，**而畫面上完全看不出異常**。
+ *
+ * 這是量測工具與版面之間的隱性耦合：工具假設「iframe 一直看得見」，
+ * 而那是舊版面的巧合，不是契約。版面早晚還會再變，所以修的是工具。
+ *
+ * 捲的是**外殼這一份 document**（`f.scrollIntoView`），不是 iframe 內部。
+ * 標本自己的捲動位置由 `f.contentWindow.scrollTo(0, 0)` 歸零 —— 那一行是既有行為，
+ * 它保證每次量測都從標本頂端開始，與這裡的外殼捲動是兩件事。
+ */
+async function ptIn(sel) {
+  const p = await evaluate(`(() => {
+    const f = document.querySelector('iframe');
+    f.scrollIntoView({ block: 'nearest' });
+    const fr = f.getBoundingClientRect();
+    const b = f.contentDocument.querySelector('${sel}').getBoundingClientRect();
+    f.contentWindow.scrollTo(0, 0);
+    const x = fr.left + b.left + b.width/2, y = fr.top + b.top + b.height/2;
+    const hit = document.elementFromPoint(x, y);
+    return { x, y, inViewport: x >= 0 && y >= 0 && x <= innerWidth && y <= innerHeight,
+             hit: hit ? hit.tagName.toLowerCase() : null };
+  })()`);
+  // 落空的點擊會靜默地變成「這一輪沒有互動」，而那在下游長得跟「暖機期正確排除了它」
+  // 一模一樣。寧可在這裡爆掉
+  if (!p.inViewport || p.hit === null) {
+    throw new Error(`ptIn(${sel}) 的座標打不到東西：(${Math.round(p.x)}, ${Math.round(p.y)})`
+      + ` inViewport=${p.inViewport} hit=${p.hit} —— 座標只在當下的捲動位置有效`);
+  }
+  return p;
+}
 /** 外殼按鈕，用文字找 */
 const ptShell = (text) => evaluate(`(() => {
   const el = [...document.querySelectorAll('button, select')]
@@ -117,11 +152,23 @@ for (let i = 0; i < 80 && !ready; i++) {
 if (!ready) throw new Error('specimen never mounted');
 await sleep(1500); // 過 warmup
 
-const busyBtn = await ptIn('#cal-busy-btn');
-const layoutBtn = await ptIn('#cal-layout-btn');
-
+/**
+ * ⚠️ **座標每次現算，不准快取。**
+ *
+ * `ptShell()` 找外殼按鈕時會 `scrollIntoView({ block: 'center' })`，
+ * 所以任何一次「按外殼按鈕」都可能把頁面捲走，而先前算好的 iframe 內座標
+ * **只在當時的捲動位置有效**。
+ *
+ * 2026-07-26 外殼改成雙欄之後這件事爆出來：`runProtocol` 舊版重用開場算好的
+ * `busyBtn`，而 #16 的迴圈每輪都會按一次「重跑」（捲動 840px）——
+ * 第 2、3 輪的十次點擊全部打在空白處，那兩輪零互動、不進歷史。
+ * 症狀是 #16 只收到 2 輪而不是 3 輪，**而畫面上完全看不出異常**。
+ *
+ * 舊版面之所以沒事，是因為那時捲動幅度小到打歪了還在按鈕上 —— 巧合，不是契約。
+ */
 async function runProtocol(n = 10, gap = 1000) {
-  for (let i = 0; i < n; i++) { await realClick(busyBtn); await sleep(gap); }
+  const pt = await ptIn('#cal-busy-btn');
+  for (let i = 0; i < n; i++) { await realClick(pt); await sleep(gap); }
   await sleep(1200);
 }
 
@@ -153,7 +200,7 @@ check(9, 'flush 節流（換算 5 秒 ≤ 25 次）',
   `seq=${s1.metrics.seq}，經過 ${((Date.now() - t0) / 1000).toFixed(1)}s → 5 秒約 ${(seqRate * 5).toFixed(1)} 次`);
 
 // ── #7 按鈕 B：強制同步版面重排 ────────────────────────────────────────
-await realClick(layoutBtn);
+await realClick(await ptIn('#cal-layout-btn'));
 await sleep(1500);
 const s7 = await snap();
 const forcedFrame = [...(s7.loafRecent || []), s7.loafWorst]
@@ -193,7 +240,10 @@ check(6, '反向歸因：外殼的工作不算在標本頭上',
 // ── #10 + #3b：切 mode，暖機期那一下不得入帳 ──────────────────────────
 const modeBtn = await ptShell('忙迴圈 30ms');
 await realClick(modeBtn);
-await realClick(busyBtn);           // 切完立刻點 —— 落在 500ms 暖機窗內
+// 切完立刻點 —— 落在 500ms 暖機窗內。座標現算：上一行的 ptShell 剛捲過頁面，
+// 快取的座標會打空，而**打空也會讓 totalInteractions 是 0** ——
+// 這條檢查的期望值正好也是 0，所以落空會偽裝成通過。ptIn 現在會在打不到東西時擲錯
+await realClick(await ptIn('#cal-busy-btn'));
 await sleep(300);
 const sWarm = await snap();
 check('3b', 'warmup 期間的互動不入帳',
@@ -227,7 +277,10 @@ const medOfMeds = sortedMeds.length % 2 ? sortedMeds[(sortedMeds.length - 1) / 2
 const dispersion = medOfMeds > 0 ? (sortedMeds[sortedMeds.length - 1] - sortedMeds[0]) / medOfMeds : 1;
 check(16, '可重現性：三輪 median 相對離散度 ≤ 15%',
   runs300.length >= 3 && dispersion <= 0.15,
-  `三輪 median=${meds.map((m) => Math.round(m)).join(' / ')} → 離散度 ${(dispersion * 100).toFixed(1)}%`);
+  // 整份 history 的 mode 也印出來。只印 busy-300 的 median 的話，
+  // 「收到幾輪」與「離散度多少」兩種失敗長得一模一樣 —— 而它們的病因完全不同
+  `三輪 median=${meds.map((m) => Math.round(m)).join(' / ')} → 離散度 ${(dispersion * 100).toFixed(1)}%`
+  + `（busy-300 共 ${runs300.length} 輪；history 全部 = [${s16.history.map((h) => h.mode).join(', ')}]）`);
 
 // ── #12 destroy 無殘留：換標本後靜置 5 秒 ─────────────────────────────
 const sw = await ptShell('主執行緒阻塞');
