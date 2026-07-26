@@ -410,54 +410,54 @@ table.sheet caption { text-align: start; color: var(--color-muted); font-size: v
           <td class="name"><a href="/specimens/01-main-thread-block.html">主執行緒阻塞</a>
             <small>在事件處理器裡同步排序五萬筆訂單</small></td>
           <td>INP median</td>
-          <td class="val">896 → 28 ms</td>
-          <td class="ratio">32.0×</td>
-          <td><span class="flag" data-state="watch">病變離散度 25.9%，兇手三輪不一致</span></td>
+          <td class="val">952 → 24 ms</td>
+          <td class="ratio">39.7×</td>
+          <td><span class="flag" data-state="watch">治療臂落在 8ms 量化底噪（24/48/20）；兇手屬交界標本</span></td>
         </tr>
         <tr>
           <td class="no">02</td>
           <td class="name"><a href="/specimens/02-long-list.html">長列表未虛擬化</a>
             <small>一次渲染 5000 筆，約 40,000 個 DOM 節點</small></td>
           <td>LCP</td>
-          <td class="val">1864 → 80 ms</td>
-          <td class="ratio">23.3×</td>
-          <td><span class="flag" data-state="ok">三臂皆可重現，病變離散度 5.8%</span></td>
+          <td class="val">2012 → 100 ms</td>
+          <td class="ratio">20.1×</td>
+          <td><span class="flag" data-state="ok">三臂皆可重現，病變離散度 14.1%</span></td>
         </tr>
         <tr>
           <td class="no">03</td>
           <td class="name"><a href="/specimens/03-layout-thrashing.html">強制同步版面重排</a>
             <small>迴圈裡交替讀寫版面屬性，800 列就是 800 次</small></td>
           <td>forced style &amp; layout</td>
-          <td class="val">954 ms → 幾乎無</td>
-          <td class="ratio">治療版落在雜訊底線內</td>
-          <td><span class="flag" data-state="ok">病變離散度 14.2%</span></td>
+          <td class="val">731 ms → 三輪零幀</td>
+          <td class="ratio">治療版無 entry，不報比值</td>
+          <td><span class="flag" data-state="ok">病變離散度 1.7%</span></td>
         </tr>
         <tr>
           <td class="no">04</td>
           <td class="name"><a href="/specimens/04-unthrottled-events.html">事件處理未節流</a>
             <small>scroll handler 每次事件掃過 8000 列</small></td>
           <td>掉幀峰值</td>
-          <td class="val">113 → 11 幀</td>
-          <td class="ratio">10.3×</td>
-          <td><span class="flag" data-state="watch">最佳臂離散度 54.5%，擦線</span></td>
+          <td class="val">99 → 10 幀</td>
+          <td class="ratio">9.9×</td>
+          <td><span class="flag" data-state="watch">passive 臂反而優於病變 7~8 幀 —— 判準落空，照實記</span></td>
         </tr>
         <tr>
           <td class="no">05</td>
           <td class="name"><a href="/specimens/05-layout-shift.html">版面位移</a>
             <small>圖片沒尺寸、字族換入、延遲插入橫幅</small></td>
           <td>CLS</td>
-          <td class="val">0.2694 → 0</td>
-          <td class="ratio">三段梯度 2.6× / 3.0× / 歸零</td>
-          <td><span class="flag" data-state="ok">四臂離散度 0.0%</span></td>
+          <td class="val">0.2474 → 0（無 entry）</td>
+          <td class="ratio">三段梯度 2.4× / 2.8× / 歸零</td>
+          <td><span class="flag" data-state="ok">四臂離散度 0.0%，病變值命中解析值 0.247426</span></td>
         </tr>
         <tr>
           <td class="no">06</td>
           <td class="name"><a href="/specimens/06-rerender-storm.html">re-render 風暴</a>
             <small>每 25ms 推一批，病變版每批重建整張 1000 列清單</small></td>
           <td>有渲染的幀距 median</td>
-          <td class="val">200 → 16.7 ms</td>
-          <td class="ratio">12.0×</td>
-          <td><span class="flag" data-state="ok">病變離散度 2.2%</span></td>
+          <td class="val">167 → 16.7 ms</td>
+          <td class="ratio">10.0×</td>
+          <td><span class="flag" data-state="ok">主指標離散度 2.6%；判準雙絕對錨首次生效，通過</span></td>
         </tr>
       </tbody>
     </table>
@@ -576,7 +576,7 @@ table.sheet caption { text-align: start; color: var(--color-muted); font-size: v
     CDP 派送真實輸入（合成事件沒有互動編號，一筆都不會回報）。
     每個 mode 三輪，可重現判準為離散度 ≤ 30%（校準標本 ≤ 15%）加上三輪兇手一致；
     治療版落在雜訊底線內時不報比值 —— 誠實的說法是「治療版該指標為零」，不是一個很大的倍數。
-    原始資料 <code>docs/measurements/2026-07-26-reproducibility-4x-5.json</code>，66 筆，可自行覆算。
+    原始資料 <code>docs/measurements/2026-07-26-reproducibility-4x-6.json</code>，66 筆，可自行覆算。
     本頁沒有任何外部請求：不載入 CDN 字體、不打第三方分析、不放追蹤像素 ——
     量測站點自己去要外部資源，等於把污染源寫進實驗器材。
     版面由系統字體堆疊排成，因為中日韓網頁字體動輒 5–15MB。
