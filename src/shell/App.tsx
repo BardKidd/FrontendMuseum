@@ -71,8 +71,60 @@ function nowEpoch(): number {
   return performance.timeOrigin + performance.now();
 }
 
-const INITIAL_META = SPECIMENS[0];
-const INITIAL_MODE = firstMode(INITIAL_META);
+/**
+ * 深連結 `?specimen=<id>&mode=<modeId>` —— **B 類量測的正確性前提，不是便利功能。**
+ *
+ * B 類切 mode 會重載 iframe 的 document，但 iframe 與外殼共用同一條 renderer 主執行緒：
+ * 前一份 document 的拆除與殘留工作落在**新 document 的時鐘之內**，而 LCP 取的是
+ * `entry.startTime`（以新 document 的 timeOrigin 起算）。於是 LCP 帶著一個由
+ * 「前導 mode 有多重」決定的加項。
+ *
+ * 2026-07-26 實測，單一變因、零重疊：
+ *   標本 #2 的 fixed-virtual（141 個節點）
+ *     前導 broken                   LCP  1896 / 2616 / 2988 ms
+ *     前導 fixed-content-visibility LCP  9812 / 10620 / 16504 ms
+ *   差距全部落在新 document 的 responseEnd → DCL 之間（responseEnd 一律 13~262ms，
+ *   不是抓取問題），切換前插 15 秒靜置排不掉。同一份量測裡 141 個節點的 document
+ *   載入耗時是 40,021 個節點那份的五倍 —— 那個數字結構上不可能在描述標本。
+ *
+ * 舊的量測順序（每輪都 `for m of modes`）讓每個 mode 的前導永遠相同，**於是污染是常數**：
+ * 三輪離散度看起來很漂亮，而它靜靜地烙進臂間比值裡。輪轉順序只是把它掀開。
+ *
+ * 有了這個參數，每一筆 B 類樣本都從一次全新的 measure.html 導覽開始，
+ * 目標 mode 就是首載的那一份 document，前導成本歸零。
+ */
+function initialFromUrl(): { meta: SpecimenMeta; mode: string; cpu: CpuThrottle } {
+  const fallbackMeta = SPECIMENS[0];
+  const fallback = { meta: fallbackMeta, mode: firstMode(fallbackMeta), cpu: 'unknown' as CpuThrottle };
+  if (typeof location === 'undefined') return fallback;
+
+  const q = new URLSearchParams(location.search);
+
+  /**
+   * `cpu` 是**宣告**，跟下拉選單完全同一個語意（protocol.ts:55「無法從 JS 偵測」）。
+   * 它必須能從 URL 帶進來：deep-link 每量一筆就重載整個外殼，選單狀態隨之清空，
+   * 而「載入後再補按一次選單」那個 `evaluate()` 會插進正在量的載入期。
+   */
+  const wantCpu = q.get('cpu');
+  const cpu: CpuThrottle = wantCpu === '1x' || wantCpu === '4x' || wantCpu === '6x' ? wantCpu : 'unknown';
+
+  const wantSpecimen = q.get('specimen');
+  if (wantSpecimen === null) return { ...fallback, cpu };
+
+  // 認不得的 id 一律退回預設，不擲錯：量測工具打錯字時該看到「量到的是別的標本」，
+  // 而 snapshot.mode / snapshot.specimenId 會把它報出來
+  const meta = getSpecimen(wantSpecimen as SpecimenId);
+  if (meta === undefined) return { ...fallback, cpu };
+
+  const wantMode = q.get('mode');
+  const modeOk = wantMode !== null && meta.modes.some((m) => m.id === wantMode);
+  return { meta, mode: modeOk ? (wantMode as string) : firstMode(meta), cpu };
+}
+
+const INITIAL = initialFromUrl();
+const INITIAL_META = INITIAL.meta;
+const INITIAL_MODE = INITIAL.mode;
+const INITIAL_CPU = INITIAL.cpu;
 
 /** 面板真正吃到的東西。所有欄位都只透過 250ms 的節流閘門更新 */
 interface PanelBuffer {
@@ -119,7 +171,7 @@ export function App() {
   const [specimenId, setSpecimenId] = useState<SpecimenId>(INITIAL_META.id);
   const [mode, setMode] = useState<string>(INITIAL_MODE);
   const [runId, setRunId] = useState<string>(() => nextRunId());
-  const [cpuThrottle, setCpuThrottle] = useState<CpuThrottle>('unknown');
+  const [cpuThrottle, setCpuThrottle] = useState<CpuThrottle>(INITIAL_CPU);
   const [refreshHz, setRefreshHz] = useState(0);
   const [history, setHistory] = useState<RunResult[]>([]);
   /**

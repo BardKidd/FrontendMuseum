@@ -294,6 +294,9 @@ const SPECS = [
     // 每 250ms 讀一次面板的 <pre> 會把外殼的工作插進標本正在量的載入期。
     action: 'scroll', trigger: '#ll-list', reps: 10, intervalMs: 500,
     inpBased: false, midGapSnapshot: false, quietMs: 12000,
+    /** B 類的靜置現在從**導覽**起算，要蓋住外殼自己的開機（而且是在 4x 底下開機），
+     *  不再只是標本的載入期。多給的 8 秒是外殼開機的餘裕，不是標本的 */
+    navQuietMs: 20000,
   },
   {
     id: '03-layout-thrashing', button: '03-layout-thrashing',
@@ -355,6 +358,9 @@ const SPECS = [
     // 「不要碰」包含不要輪詢：整段靜置期一次 CDP 呼叫都不發。
     action: 'idle', reps: 1, intervalMs: null, idleMs: 0,
     inpBased: false, midGapSnapshot: false, quietMs: 6000,
+    /** 同 #2：靜置從導覽起算，要蓋住外殼在 4x 底下的開機。
+     *  位移源最晚排在 1500ms，6000 是給位移的，多出來的 8000 是給外殼開機的 */
+    navQuietMs: 14000,
   },
   {
     id: '06-rerender-storm', button: '06-rerender-storm',
@@ -591,15 +597,13 @@ async function bootShell() {
 
 async function measureSpecimen(spec) {
   log(`\n━━ ${spec.id} ━━ (${spec.cls} 類, ${spec.modes.length} 個 mode × ${RUNS} 輪)`);
-  await bootShell();
 
-  if (spec.id !== '00-calibration') {
-    await clickShell(spec.button, '換標本');
-    if (spec.cls === 'B') {
-      // B 類不輪詢掛載：換標本載入的就是第一輪要量的那份 document，
-      // 每 250ms 打一次 querySelector 等於把觀測放進載入期。交給迴圈裡的固定靜置
-      await sleep(500);
-    } else {
+  // B 類不走 bootShell + 換標本按鈕：它的每一筆樣本都自己重新導覽一次
+  //（deep-link 直接指定 specimen / mode / cpu，見下面 B 類分支的長註解）
+  if (spec.cls !== 'B') {
+    await bootShell();
+    if (spec.id !== '00-calibration') {
+      await clickShell(spec.button, '換標本');
       const ok = await waitFor(async () => await evaluate(`(() => { const f = document.querySelector('iframe');
         return !!(f && f.contentDocument && f.contentDocument.querySelector(${JSON.stringify(spec.readyMark)})); })()`),
         40000, `${spec.id} 掛載`);
@@ -666,49 +670,81 @@ async function measureSpecimen(spec) {
       }
     }
   } else {
-    // B 類：一輪 = 一份新 document。同一個 mode 連按兩次不會重載
-    //（switchMode 對 next === modeRef.current 直接 return，按鈕本身也 disabled），
-    // 所以走「輪流切」：mode 之間交替，順帶把單調漂移也擋掉
-    // 換標本時外殼已經把 modes[0] 載好了（firstMode），那顆按鈕因此是 disabled。
-    // 第一輪第一個 mode 不必再按 —— 它本來就是一份剛載入的新 document，
-    // 正是 B 類要的東西。之後 mode 交替，不會再撞到自己
-    let current = spec.modes[0].id;
+    /*
+     * B 類：**每一筆樣本都從一次全新的 measure.html 導覽開始**，目標 mode 由
+     * deep-link（`?specimen=&mode=&cpu=`）指定，所以它就是首載的那一份 document。
+     *
+     * 為什麼不能再用「按按鈕切 mode」（2026-07-26 實測查出，`tools/b-class-isolation.mjs`
+     * 是這條的回歸測試）：
+     *
+     * iframe 與外殼共用同一條 renderer 主執行緒。前一份 document 的拆除與殘留工作
+     * 落在**新 document 的時鐘之內**，而 LCP 取的是 `entry.startTime`，以新 document
+     * 的 timeOrigin 起算 —— 於是 LCP 帶著一個由「前導 mode 有多重」決定的加項。
+     *
+     *   標本 #2 的 fixed-virtual，同一個 mode 量兩次（皆 4x）：
+     *     前導 broken                    LCP 172 ~ 180ms
+     *     前導 fixed-content-visibility  LCP 888 ~ 892ms
+     *     deep-link 全新導覽             LCP 100 / 92 / 108ms（全距 16，底線 50）
+     *
+     * **污染項是訊號的六倍以上。** 差距全部落在新 document 的 responseEnd → DCL 之間
+     * （responseEnd 一律 13~262ms，不是抓取問題），切換前插 15 秒靜置排不掉。
+     *
+     * ⚠️ 這裡曾經引用 `32 / 32 / 40ms`。那組數字是**同一支探針的前一版**量的，
+     * 而那一版把節流放在 document 載完**之後**才套上 —— 也就是載入期實際跑在 1x。
+     * 兩組差約三倍正是節流率本身。引用它而不標條件，等於拿 1x 的數字去描述 4x 的結論。
+     *
+     * 最惡劣的是它沒有症狀：舊的 `for r { for m of modes }` 讓每個 mode 的前導永遠相同，
+     * 污染因此是常數，三輪離散度看起來漂亮，而它靜靜地烙進臂間比值裡。
+     *
+     * 節流在**導覽之前**就打開，而且用 `cpu=` 參數宣告，不再按下拉選單：
+     * 載入期指標就是要在宣告的條件下量，而「載入後補按一次選單」那個 `evaluate()`
+     * 會插進正在量的載入期。代價是外殼自己的 React bundle 也在 4x 底下解析 ——
+     * 那是每一筆樣本都相同的常數，而且它現在真的落在宣告的條件裡。
+     */
+    /*
+     * 一次**丟棄的暖身導覽**。
+     *
+     * 隔離修好之後剩下的最後一個位置效應：每支標本的第一筆樣本偏高，
+     * 而它偏高的是冷啟動（bundle、字型、圖片、HTTP 連線都還沒暖），不是那個 mode。
+     * 實測（2026-07-26，deep-link 隔離之後）：
+     *   #2 broken   第一筆 2824ms，之後 2016 / 1948   ⇒ 三輪離散度 43.5%，判 unstable
+     *   #5 broken   第一筆 LCP 140ms，之後 80 / 84
+     * 暖身跑 modes[0]（依協定必為病變版，最重的那一份），量完直接丟掉不入帳。
+     */
+    await S('Emulation.setCPUThrottlingRate', { rate: THROTTLE_RATE });
+    await S('Page.navigate', { url: `${URL_SHELL}?specimen=${encodeURIComponent(spec.id)}`
+      + `&mode=${encodeURIComponent(spec.modes[0].id)}&cpu=${encodeURIComponent(THROTTLE_LABEL)}` });
+    await sleep(spec.navQuietMs ?? spec.quietMs);
+    log(`   （暖身一次，不入帳）`);
+
     for (let r = 1; r <= RUNS; r++) {
-      /*
-       * 每一輪把 mode 順序輪轉一格。
-       *
-       * 先前是固定的 `for r { for m of spec.modes }`，於是每個 mode 每輪都佔同一順位，
-       * **mode 與「在這一輪的第幾個位置」完全共線** —— 三輪不是打散共線，是複製三次。
-       * 任何隨位置單調變化的東西（熱節流、快取暖起來、記憶體壓力）都會整份記在
-       * 某個 mode 頭上，而離散度看起來反而漂亮，因為三輪都偏同樣的量。
-       * 註解先前還宣稱「順帶把單調漂移也擋掉」，那是錯的。
-       */
+      // 輪轉一格。隔離之後已經沒有前導效應了，這一層留著是擋單調漂移
+      //（熱節流、記憶體壓力）與 mode 順位共線。先前這裡有一個守衛用來避免
+      // 「同一個 mode 連按兩次不會重載」，它讓 r=1 被推成 rot(1)、與 r=2 撞成同一種順序
+      //（三輪只有兩種順序）。每筆樣本都重新導覽之後，那個前提消失，守衛跟著移除
       const n = spec.modes.length;
-      const rot = (k) => spec.modes.map((_, i) => spec.modes[(i + k) % n]);
-      let order = rot(r - 1);
-      // 輪轉後的第一個若正好等於上一輪的最後一個，再轉一格 —— 同一個 mode 連按兩次
-      // 不會重載（switchMode 對 next === current 直接 return，按鈕本身也 disabled），
-      // 那一輪就不是新的 document。n = 2 時這個守衛會把輪轉抵銷掉，
-      // 兩個 mode 只能交替，位置共線在數學上無法避免，照實記著
-      if (order[0].id === current) order = rot(r % n);
+      const order = spec.modes.map((_, i) => spec.modes[(i + (r - 1)) % n]);
       for (const m of order) {
-        const alreadyFresh = r === 1 && m.id === current && spec.modes[0].id === m.id;
-        if (!alreadyFresh) {
-          await clickShell(m.label, `切 mode ${m.id}（重載）`);
-          current = m.id;
-        }
+        await S('Emulation.setCPUThrottlingRate', { rate: THROTTLE_RATE });
+        const url = `${URL_SHELL}?specimen=${encodeURIComponent(spec.id)}`
+          + `&mode=${encodeURIComponent(m.id)}&cpu=${encodeURIComponent(THROTTLE_LABEL)}`;
+        await S('Page.navigate', { url });
+
         // 固定靜置，整段不發任何 CDP 呼叫。載入期指標（LCP／CLS）就是在這段裡定案的，
-        // 輪詢等於把觀測動作放進被觀測的視窗
-        await sleep(spec.quietMs);
+        // 輪詢等於把觀測動作放進被觀測的視窗。這一段現在還要蓋住外殼自己的開機
+        await sleep(spec.navQuietMs ?? spec.quietMs);
         const mounted = await evaluate(`(() => { const f = document.querySelector('iframe');
           return !!(f && f.contentDocument && f.contentDocument.querySelector(${JSON.stringify(spec.readyMark)})); })()`);
-        if (!mounted) { problems.push(`${spec.id}/${m.id} 第 ${r} 輪靜置 ${spec.quietMs}ms 後仍未掛載`); continue; }
+        if (!mounted) { problems.push(`${spec.id}/${m.id} 第 ${r} 輪靜置後仍未掛載`); continue; }
 
         const forcedSamples = await runProtocol(spec);
         await sleep(1500);
         const s = await snap();
         const c = capture(s, forcedSamples);
         if (c.mode !== m.id) problems.push(`${spec.id} 第 ${r} 輪 snapshot.mode=${c.mode} 但預期 ${m.id}`);
+        if (c.cpuThrottle !== THROTTLE_LABEL) {
+          problems.push(`${spec.id}/${m.id} 第 ${r} 輪宣告的 cpuThrottle=${c.cpuThrottle}，預期 ${THROTTLE_LABEL}`);
+        }
         records.push({ specimenId: spec.id, mode: m.id, run: r, ...c, stats: null });
         log(`   ${m.id} #${r}  ${fmt(spec, c, null)}`);
       }
