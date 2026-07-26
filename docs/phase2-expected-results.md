@@ -1023,9 +1023,21 @@ if (order[0].id === current) order = rot(r % n);   // ← current 初值就是 m
 | 本輪上午 `2026-07-26-reproducibility-4x.json` 的 #2 全部九筆 | 全數 | 由 `-4.json` 取代 |
 | 上一輪 `2026-07-25-reproducibility-4x.json` 的 #2 全部九筆 | 全數 | 同上 |
 
-`fixed-virtual` 的真實 LCP 是 92ms。已發表的 680ms 裡有約 588ms 是前一個 mode 的殘留 ——
-**污染項是訊號的六倍**，而該臂當時被判為「只有這一臂被儀器加了負載」的保留意見，
-保留的理由完全指錯了方向。
+`fixed-virtual` 的真實 LCP 是 92ms。
+
+⚠️ **污染項有多大，必須在同一輪之內回答。** 先前這裡寫「已發表的 680ms 裡有約 588ms
+是殘留」—— 那是拿 2026-07-25 那份 JSON 的 680ms 去減本輪的 92ms，**跨 session 相減**，
+正是本檔 `:944-945` 與 `phase1:455-456` 明文禁止的事。已改成同一輪內的對照：
+
+```
+tools/b-class-isolation.mjs 同一輪，皆 4x：
+  fixed-virtual 前導 fixed-content-visibility   LCP 888 ~ 892ms
+  fixed-virtual deep-link 全新導覽              LCP 100 / 92 / 108ms
+  ⇒ 污染項約 790ms，是訊號的八倍
+```
+
+該臂當時被判為「只有這一臂被儀器加了負載」的保留意見 —— 保留是對的，
+**但方向完全指錯**：加負載的不是那一臂，是量它的方法。
 
 依 repo 規矩 5，已發出的文章不改，這些寫進第二篇。
 
