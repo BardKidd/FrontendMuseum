@@ -18,7 +18,7 @@
  *     它負責把 '4x' 寫進 RunConditions。只做前者的話數字是 4x 但條件記成 unknown。
  */
 import { spawn } from 'node:child_process';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 
 const CHROME = '/opt/brave.com/brave/brave';
 const PORT = 9335;
@@ -27,7 +27,26 @@ const PROFILE = '/tmp/perf-museum-repro-profile';
 const THROTTLE_RATE = 4;
 const THROTTLE_LABEL = '4x';
 const RUNS = 3;
-const OUT = 'docs/measurements/2026-07-25-reproducibility-4x.json';
+/**
+ * 輸出檔名**依當天日期產生，而且拒絕覆蓋既有檔案**。
+ *
+ * 2026-07-26 修：先前這裡寫死 `2026-07-25-reproducibility-4x.json`，於是
+ * **每跑一次就把上一輪的原始資料靜默覆蓋掉** —— 而且只跑部分標本時（`node
+ * tools/reproducibility.mjs 01`）會把 60 筆的完整資料集換成 9 筆，
+ * 沒有任何警告。已發出的文章正是引用那個檔名要讀者自行覆算的。
+ *
+ * 原始資料是這個專案唯一不可再生的東西（機器狀態不可能重現），
+ * 所以這裡寧可讓程式停下來，也不讓它覆寫。
+ */
+function outPath() {
+  const d = new Date();
+  const stamp = [d.getFullYear(), d.getMonth() + 1, d.getDate()]
+    .map((n, i) => (i ? String(n).padStart(2, '0') : String(n))).join('-');
+  const base = `docs/measurements/${stamp}-reproducibility-${THROTTLE_LABEL}`;
+  let p = `${base}.json`;
+  for (let n = 2; existsSync(p); n++) p = `${base}-${n}.json`;
+  return p;
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => console.log(...a);
@@ -111,12 +130,67 @@ function realClickNoWait(pt) {
   ];
 }
 
+/**
+ * **絕對排程**的點擊派送：第 k 發打在 `t0 + k × intervalMs`，不等 renderer 回應。
+ *
+ * 這是 `realClick`（等回應）與 `realClickNoWait`（一次灌完，I ≈ 0）之間唯一正確的第三條路，
+ * 兩端都被實測判死過（已發出文章 §六（二））：
+ *   - `await realClick()` + `sleep(I)` ⇒ 實際節拍是 `S + I`，被主執行緒的忙碌反過來決定，
+ *     I 再怎麼宣告都不算數 —— 那不是凍結變因。
+ *   - 一次灌完 ⇒ I ≈ 0，不是任何人宣告過的值。
+ *
+ * 差別在**下一發的時刻由誰決定**：這裡由 `t0` 起算的絕對時間軸決定，
+ * 與上一發何時 ack 無關。所以第 k 發的名目時刻與實際時刻只差 Node 計時器的抖動，
+ * 而不是差一整個 `S`。回應統一在最後 `Promise.all` 收。
+ *
+ * ⚠️ **回傳實際跨距（wall-clock）給呼叫端記帳。** 名目跨距是 `(reps−1) × I`；
+ * 兩者差太多就代表這一輪的節拍沒有真的交付，那一輪的數字不能用 ——
+ * 不記錄的話這種失敗在事後的 JSON 裡完全查不出來。
+ */
+async function realClickAbsolute(pt, reps, intervalMs) {
+  const inflight = [];
+  const t0 = performance.now();
+  for (let k = 0; k < reps; k++) {
+    const wait = (t0 + k * intervalMs) - performance.now();
+    if (wait > 0.5) await sleep(wait);
+    inflight.push(...realClickNoWait(pt));
+  }
+  const dispatchSpanMs = performance.now() - t0;
+  await Promise.all(inflight);
+  return dispatchSpanMs;
+}
+
 /** 一格滾輪。protocol 明寫「用滾輪，不要拖捲軸」—— 拖捲軸走的是另一條事件路徑 */
 async function realWheel(pt, deltaY = 120) {
   await S('Input.dispatchMouseEvent', {
     type: 'mouseWheel', x: pt.x, y: pt.y, deltaX: 0, deltaY,
     pointerType: 'mouse',
   });
+}
+
+/**
+ * 一拍之內連派 `ticks` 格滾輪，**不等中間任何一次的回應**。
+ *
+ * `Input.dispatchMouseEvent` 要等 renderer 回覆才 resolve，而 renderer 正在跑標本的
+ * O(N) 全掃（標本 #4 在 4x 底下約 33ms）—— 逐次 `await realWheel()` 會退化成
+ * 「做完一次才派下一次」，三格必然落在三個不同的幀，**一幀之內就沒有第二個事件可合併**。
+ * 這與上面 `realClickNoWait` 是同一個坑，作法照抄：同一條 WebSocket 上的訊息
+ * 瀏覽器依序處理，順序有保證，回應統一在最後收，中間一個 `sleep` 都不插 ——
+ * 所以它**不引入時序抖動**（Node 計時器的 ±1~2ms 才是抖動來源，這裡一次都不用）。
+ *
+ * ⚠️ **`wheelTicks` 等於該標本 protocol 的一部分，不是驅動器的內部細節。**
+ * 替某個標本加上這個欄位，`src/specimens.ts` 的 `protocol.instruction` 必須同步改成
+ * 「連滾 N 格」—— 否則人手複驗做的不是機器做的那件事，兩邊數字不可比（spec §1 原則 3）。
+ */
+function realWheelBurst(pt, ticks, deltaY = 120) {
+  const inflight = [];
+  for (let k = 0; k < ticks; k++) {
+    inflight.push(S('Input.dispatchMouseEvent', {
+      type: 'mouseWheel', x: pt.x, y: pt.y, deltaX: 0, deltaY,
+      pointerType: 'mouse',
+    }));
+  }
+  return Promise.all(inflight);
 }
 
 /**
@@ -191,9 +265,18 @@ const SPECS = [
       { id: 'fixed-yield', label: '治療一' },
       { id: 'fixed-worker', label: '治療二' },
     ],
-    // intervalMs = null：盡快連續。**不做 mid-gap 取樣** —— 這個標本量的就是 inputDelay，
-    // protocol 進行中多打一次 CDP evaluate 等於往待量的那段裡加料。
-    action: 'click', trigger: '#mtb-sort-btn', reps: 10, intervalMs: null,
+    // 2026-07-26：intervalMs 從 null（盡快連續）改成 17ms 的絕對排程機器節拍。
+    // 推導與作廢清單在 docs/phase1-expected-results.md 修正紀錄，三條邊界在標本檔檔頭。
+    // **不做 mid-gap 取樣** —— protocol 進行中多打一次 CDP evaluate
+    // 等於往待量的那段裡加料。
+    action: 'click', trigger: '#mtb-sort-btn', reps: 10, intervalMs: 17,
+    absoluteClick: true,
+    // 收斂靠輪詢標本自報的 completedSorts，不靠固定 sleep：
+    // 固定 sleep 的失敗是**無聲的** —— 沒 drain 完就截斷會記成
+    // completedSorts 9 / cancelledSorts 0（護欄看起來乾淨），
+    // 而下一輪 reset 時那筆 abandoned 會 emit 成非零 cancelledSorts，
+    // 被誤診成「混了上一個 mode」。
+    drainSignal: 'completedSorts',
     inpBased: true, midGapSnapshot: false,
   },
   {
@@ -230,14 +313,40 @@ const SPECS = [
       { id: 'fixed-observer', label: '治療三' },
     ],
     action: 'scroll', trigger: '#thr-scroller', reps: 10, intervalMs: 500,
+    /*
+     * 一拍連派 3 格滾輪（2026-07-26 加）。**只有這個標本有這個欄位。**
+     *
+     * 為什麼要 ≥ 2：治療二的 rAF 閘門要合併到東西，一幀之內至少要有第二個事件，
+     * 而 `scroll` 由規格保證一幀最多派送一次 —— 舊版一拍一格，三輪實測
+     * `fixed-raf` 的 passes 恰好逐輪等於 scrollEvents，閘門一次都沒觸發過。
+     *
+     * 為什麼是 3 不是更多：
+     *  (a) 每多一格就多一輪 8000 次 rect 讀取。舊版一拍 2 次全掃量到掉幀峰值 38/46/43，
+     *      一拍 4 次全掃線性外推約 80~90，而 droppedFrames 的天花板是
+     *      5000ms ÷ 16.7ms ≈ 299 —— 兩臂一起貼在天花板上就分不出高下（標本 #6 已示範）。
+     *      3 格讓病變版推估落在天花板的三分之一以下。
+     *  (b) 每多一格就拉長一拍之內主執行緒被塞住的時間，Chrome 對排隊中的 wheel
+     *      做合併的機會就越大 —— 那會從驅動器這一側把「兩臂工作量不等」重新做出來。
+     *      硬性驗收：broken 與 fixed-passive 的 wheelEvents / rectReads 必須逐輪相等，
+     *      不相等就把這個值降回 1，接受閘門只有 2:1（1 wheel + 1 scroll）。
+     *
+     * `intervalMs` × `reps` = 5 秒不變，掉幀的 5 秒滾動窗仍剛好填滿。
+     * 一拍 3 wheel + 1 scroll = 四個事件，閘門比 4:1。
+     */
+    wheelTicks: 3,
     inpBased: false, midGapSnapshot: false,
   },
   {
     id: '05-layout-shift', button: '05-layout-shift',
     readyMark: '#ls-status', cls: 'B',
+    // 2026-07-26：單一 fixed 臂拆成梯度三段（每一臂相對前一臂只翻一個 CSS 宣告）。
+    // label 必須與 src/specimens.ts 的 LAYOUT_SHIFT_META.modes 逐字相同 ——
+    // ptShell 是 textContent.includes(label) 比對，改一邊就點不到按鈕、整支標本中斷。
     modes: [
       { id: 'broken', label: '病變：三個位移源' },
-      { id: 'fixed', label: '治療：全部預留空間' },
+      { id: 'fixed-image', label: '治療一：圖片 aspect-ratio' },
+      { id: 'fixed-font', label: '治療二：再預留內文行高' },
+      { id: 'fixed-banner', label: '治療三：再預留橫幅' },
     ],
     // 位移源排在 300 / 900 / 1500ms。protocol 說靜置三秒不要碰 ——
     // 互動後 500ms 內的位移會被 hadRecentInput 豁免，碰一下就把要量的東西豁免掉了。
@@ -248,11 +357,15 @@ const SPECS = [
   {
     id: '06-rerender-storm', button: '06-rerender-storm',
     readyMark: '#rs-start', cls: 'A',
+    // ⚠️ 用**全稱**比對，不用前綴：`ptShell` 是 textContent.includes(label)，
+    // 而治療梯度改成樹狀之後出現了「治療二」與「治療二乙」——
+    // 前綴 '治療二' 會同時命中兩顆按鈕，靠 DOM 順序碰巧選對，是靜默誤擊的溫床。
+    // 這四個字串必須與 src/specimens.ts 的 RERENDER_STORM_META.modes 逐字相同。
     modes: [
       { id: 'broken', label: '病變：每批重建整表' },
-      { id: 'fixed-batch', label: '治療一' },
-      { id: 'fixed-granular', label: '治療二' },
-      { id: 'fixed-backpressure', label: '治療三' },
+      { id: 'fixed-batch', label: '治療一：批次化 + rAF' },
+      { id: 'fixed-granular', label: '治療二：只改變動的節點' },
+      { id: 'fixed-backpressure', label: '治療二乙：背壓降頻' },
     ],
     // 按一次開始，串流 5000ms 後自停（STREAM_DURATION_MS，刻意等於掉幀滾動窗長度）
     action: 'stream', trigger: '#rs-start', reps: 1, intervalMs: null, streamMs: 6500,
@@ -359,6 +472,16 @@ async function runProtocol(spec) {
   const pt = await ptIn(spec.trigger);
   if (!pt) throw new Error(`找不到觸發元素 ${spec.trigger}`);
 
+  // 絕對排程的機器節拍。**只有宣告了 `absoluteClick` 的標本走這條** ——
+  // 其他標本連程式路徑都沒換，位元不變。
+  if (spec.absoluteClick && spec.action === 'click') {
+    if (spec.intervalMs === null) {
+      throw new Error(`${spec.id} 宣告 absoluteClick 卻沒有 intervalMs —— 絕對排程需要一個宣告過的值`);
+    }
+    lastDispatchSpanMs = await realClickAbsolute(pt, spec.reps, spec.intervalMs);
+    return forcedSamples;
+  }
+
   // 盡快連續：整串事件一次灌完不等回應，讓它們在主執行緒被擋住時真的排隊
   if (spec.intervalMs === null && spec.action === 'click') {
     const inflight = [];
@@ -367,8 +490,30 @@ async function runProtocol(spec) {
     return forcedSamples;
   }
 
+  /**
+   * 節拍的時間原點。**每一拍打在 `tProto0 + i × intervalMs`，不是「上一拍做完再等 I」。**
+   *
+   * 差別在忙碌的那一臂：`Input.dispatchMouseEvent` 要等 renderer 回覆才 resolve，
+   * 而 `passive: false` 的 wheel 必須等 handler 跑完才 ack。用相對 sleep 的話，
+   * 病變臂每拍實際週期是 `500 + (1~3) × 33ms`、治療臂是 `500ms` ——
+   * 十拍下來病變臂整輪長 5.3~5.6s、治療臂 5.0s，而 `droppedFrames` 是 5 秒滾動窗，
+   * **同樣的工作量被攤在較長的時間裡，窗內抓到的比例就較低**。
+   * 方向是系統性地讓病變臂看起來比較好，量級 6~10% —— 剛好落在判準的寬度裡。
+   * 絕對節拍讓 ack 何時回來不再影響下一拍的時刻。
+   */
+  const tProto0 = performance.now();
+  const sleepUntil = async (due) => {
+    const wait = due - performance.now();
+    if (wait > 0.5) await sleep(wait);
+  };
+
   for (let i = 0; i < spec.reps; i++) {
     if (spec.action === 'click') await realClick(pt);
+    // 跨標本污染由構造排除：**只有宣告了 `wheelTicks` 的標本走連發路徑**。
+    // 標本 #2 沒有這個欄位 → undefined → falsy → 走原本的 `await realWheel(pt)`，位元不變。
+    // 不設「預設值 1 也走 realWheelBurst」：那要靠讀者相信 Promise.all([一個 promise])
+    // 等價於 await 那個 promise，而這裡要的是「沒改的標本連程式路徑都沒換」。
+    else if (spec.wheelTicks) await realWheelBurst(pt, spec.wheelTicks);
     else await realWheel(pt);
 
     if (spec.intervalMs === null) continue; // 盡快連續，中間不插任何東西
@@ -390,11 +535,17 @@ async function runProtocol(spec) {
         }
       }
       if (best !== null) forcedSamples.push(best);
-      await sleep(spec.intervalMs * 0.5);
+      // 取樣本身要花時間（一次 CDP evaluate + 反序列化），相對 sleep 會把它疊進節拍。
+      // 對齊到絕對時間軸，取樣多久都不影響下一拍的時刻
+      await sleepUntil(tProto0 + (i + 1) * spec.intervalMs);
     } else {
-      await sleep(spec.intervalMs);
+      await sleepUntil(tProto0 + (i + 1) * spec.intervalMs);
     }
   }
+  // 整輪 wall-clock 逐輪入帳。名目是 reps × intervalMs；差太多就代表節拍沒有真的交付，
+  // 而 droppedFrames 是 5 秒滾動窗 —— 整輪長度直接決定窗內抓得到多少。
+  // 不記錄的話這種偏差在事後的 JSON 裡完全查不出來
+  if (spec.intervalMs !== null) lastDispatchSpanMs = performance.now() - tProto0;
   return forcedSamples;
 }
 
@@ -407,6 +558,13 @@ function median(xs) {
 // ── 主流程 ────────────────────────────────────────────────────────────
 const records = [];
 const problems = [];
+
+/**
+ * 上一次 `runProtocol` 實際交付的派送跨距（ms）。只有走絕對排程的標本會設。
+ * 名目跨距是 `(reps−1) × intervalMs`；兩者差太多代表節拍沒有真的交付，
+ * 而那種失敗在事後的 JSON 裡查不出來 —— 所以它逐輪入帳。
+ */
+let lastDispatchSpanMs = null;
 
 async function bootShell() {
   await S('Emulation.setCPUThrottlingRate', { rate: 1 });
@@ -456,12 +614,25 @@ async function measureSpecimen(spec) {
         await sleep(1500); // 過 warmup（500ms）再留餘裕
       }
       for (let r = 1; r <= RUNS; r++) {
+        lastDispatchSpanMs = null;
         const forcedSamples = await runProtocol(spec);
         if (spec.inpBased) {
           await waitFor(async () => {
             const s = await snap();
             return (s?.metrics?.totalInteractions ?? 0) >= spec.reps;
           }, 30000, `${spec.id}/${m.id} 第 ${r} 輪收斂到 ${spec.reps} 筆互動`);
+        }
+        // 標本自報的收斂訊號優先於固定 sleep。totalInteractions 只證明「事件被記到了」，
+        // 不證明「排隊的工作 drain 完了」—— 治療臂幾乎立刻滿足前者，
+        // 而 broken 的最後一次排序要在最後一發點擊之後約 1.16 秒才結束。
+        if (spec.drainSignal) {
+          const done = await waitFor(async () => {
+            const s = await snap();
+            return (s?.metrics?.custom?.[spec.drainSignal] ?? 0) >= spec.reps;
+          }, 30000, `${spec.id}/${m.id} 第 ${r} 輪 drain 到 ${spec.drainSignal}=${spec.reps}`);
+          if (!done) {
+            problems.push(`${spec.id}/${m.id} 第 ${r} 輪 ${spec.drainSignal} 沒有收斂到 ${spec.reps} —— 這一輪的數字不可用`);
+          }
         }
         await sleep(1500); // 讓最後一批 flush 進來
         const s = await snap();
@@ -479,6 +650,14 @@ async function measureSpecimen(spec) {
 
         records.push({
           specimenId: spec.id, mode: m.id, run: r, ...c,
+          // 節拍是否真的交付。名目 = (reps−1) × intervalMs；差太多這一輪不能用。
+          // 只有走絕對排程的標本有值，其他標本是 null（不是 0 —— 0 會被讀成「量到了而且是零」）
+          dispatchSpanMs: lastDispatchSpanMs === null ? null : Math.round(lastDispatchSpanMs * 10) / 10,
+          // 名目值的定義隨路徑不同，兩者不可互相比較：
+          //   absoluteClick  量的是「第一發到最後一發」⇒ (reps−1) × I
+          //   間隔迴圈        量的是「起點到最後一拍的間隔結束」⇒ reps × I
+          dispatchSpanNominalMs: spec.intervalMs === null ? null
+            : (spec.absoluteClick ? (spec.reps - 1) : spec.reps) * spec.intervalMs,
           stats: finished ? finished.stats : null,
         });
         log(`   ${m.id} #${r}  ${fmt(spec, c, finished)}`);
@@ -575,12 +754,17 @@ for (const spec of targets) {
 }
 
 mkdirSync('docs/measurements', { recursive: true });
+const OUT = outPath();
 writeFileSync(OUT, JSON.stringify({
   measuredAt: new Date(startedAt).toISOString(),
   driver: 'CDP (Input.dispatchMouseEvent) —— 機器驅動，非人手',
   cpuThrottle: THROTTLE_LABEL,
   cpuThrottlingRate: THROTTLE_RATE,
   runsPerMode: RUNS,
+  // 這一份涵蓋哪些標本。只跑部分標本時（node tools/reproducibility.mjs 01）
+  // 它就不是完整資料集 —— 寫進檔案，不要靠讀者記得自己下過什麼參數
+  specimensCovered: [...new Set(records.map((r) => r.specimenId))],
+  isFullSweep: only.length === 0,
   records,
   problems,
   consoleErrors: [...new Set(consoleErrors)],

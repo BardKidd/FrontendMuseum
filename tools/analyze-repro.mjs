@@ -55,6 +55,28 @@ const PRIMARY = {
   '06-rerender-storm': { key: 'droppedFramesPeak', label: 'dropped frames peak', threshold: 0.30, floor: 5 },
 };
 
+/**
+ * 補充指標 —— **主指標在某一對臂上飽和、表達不了差異時用**（2026-07-26 新增）。
+ *
+ * 目前只有標本 #6：1000 台之下，任何仍在整表重建的臂 `droppedFramesPeak`
+ * 都貼在 5 秒窗的天花板上（`dropped ≈ 300 − 5000/幀距`：96ms → 248、169ms → 271，
+ * **幀距差 1.76 倍只換到 1.09 倍**）。主指標照舊算、照舊報，
+ * 但 `broken` 對 `fixed-batch` 那一對的判定要看這一欄。
+ *
+ * ⚠️ 它只取「這一幀有渲染」的幀距。對每一個 rAF callback 無條件取樣的話，
+ * 背壓臂會是「少數 ~100ms 渲染幀 + 大量 16.7ms 跳過幀」，median 與 p75 都會是 16.7，
+ * 與細粒度臂逐欄相同 —— 那正是已發出文章第二節在罵的那個缺陷的翻版。
+ */
+const EXTRA = {
+  '06-rerender-storm': {
+    key: 'renderFrameGapMedianMs',
+    label: '有渲染的幀距 median (ms)',
+    threshold: 0.30,
+    // 幀距的量子是一個 vsync（60Hz ⇒ 16.7ms）。低於它的差距不是效果，是網格
+    floor: 17,
+  },
+};
+
 /** 有取樣但一筆強制版面都沒有 = 0，不是「沒量到」。
  *  這兩者的差別就是標本 #3 治療版的全部結論 —— 判成 null 會變成「樣本不足」。*/
 const SAMPLED_FORCED = new Set(['00-calibration', '03-layout-thrashing']);
@@ -82,6 +104,7 @@ function pick(rec, key) {
       return ran ? 0 : null;
     }
     case 'droppedFramesPeak': return rec.custom?.droppedFramesPeak ?? null;
+    case 'renderFrameGapMedianMs': return rec.custom?.renderFrameGapMedianMs ?? null;
     case 'forcedMedian':
       if (rec.forcedMedian !== null && rec.forcedMedian !== undefined) return rec.forcedMedian;
       return SAMPLED_FORCED.has(rec.specimenId) ? 0 : null;
@@ -122,6 +145,13 @@ for (const [k, recs] of bySpec) {
   const culprits = recs.map(culpritOf).filter(Boolean);
   const culpritStable = culprits.length ? culprits.every((c) => c === culprits[0]) : null;
 
+  // 補充指標。沒有登記補充指標的標本一律是 null，**不是 0** ——
+  // 0 會被讀成「量到了而且是零」，那正是本檔 clsValue 那條註解在防的錯
+  const ex = EXTRA[specimenId] ?? null;
+  const exVals = ex ? recs.map((r) => pick(r, ex.key)).filter((v) => v !== null) : [];
+  const exMed = exVals.length ? median(exVals) : null;
+  const exRange = exVals.length ? Math.max(...exVals) - Math.min(...exVals) : null;
+
   report.push({
     specimenId, mode,
     metric: cfg.label,
@@ -140,6 +170,11 @@ for (const [k, recs] of bySpec) {
       : dispersion <= cfg.threshold ? 'reproducible' : 'unstable',
     culprits,
     culpritStable,
+    extraMetric: ex ? ex.label : null,
+    extraValues: ex ? exVals : null,
+    extraMedian: exMed,
+    extraRange: exRange,
+    extraAtFloor: ex && exRange !== null ? exRange <= ex.floor : null,
     droppedFramesPeak: recs.map((r) => r.custom?.droppedFramesPeak ?? null),
     sortMs: recs.map((r) => r.custom?.sortMs ?? null).filter((v) => v !== null),
     lcpElement: recs.map((r) => r.lcp?.el ?? null).filter(Boolean)[0] ?? null,
@@ -168,6 +203,13 @@ for (const specimenId of new Set(report.map((r) => r.specimenId))) {
       ratio: row.median === null ? null
         : row.median === 0 || treatedAtFloor ? Infinity
         : broken.median / row.median,
+      // 補充指標的比值。主指標飽和時（標本 #6 的 broken vs fixed-batch）
+      // 要看這一欄才判得出差異，見 EXTRA 的說明
+      extraMetric: row.extraMetric,
+      extraBroken: broken.extraMedian,
+      extraTreated: row.extraMedian,
+      extraRatio: (broken.extraMedian && row.extraMedian)
+        ? broken.extraMedian / row.extraMedian : null,
     });
   }
 }
