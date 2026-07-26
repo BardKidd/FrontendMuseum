@@ -56,7 +56,15 @@ export default defineConfig({
 
     rollupOptions: {
       input: {
+        // `/` 是首頁／標本索引（推廣入口）。**不在量測路徑上** ——
+        // 它不載入外殼、不掛任何 observer，所以它有 CSS 不違反
+        // 「量測站點不准替自己引進污染源」那條紀律。
+        // 樣式整段內嵌，零額外請求（tokens.css 只是可攜的匯出副本）。
         index: resolve(root, 'index.html'),
+        // 量測台（外殼 + iframe）。2026-07-26 從 `/` 搬到這裡 ——
+        // ⚠️ tools/acceptance.mjs 與 tools/reproducibility.mjs 的 URL_SHELL
+        // 必須跟著指到 /measure.html，兩邊不同步的話量測會開到首頁去。
+        measure: resolve(root, 'measure.html'),
         ...specimenEntries(),
       },
       output: {

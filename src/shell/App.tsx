@@ -36,6 +36,11 @@ import { computeRunStats } from '../measure/metrics';
 import { buildDeviceProfile, measureRefreshHz } from '../measure/device';
 import { Panel } from './Panel';
 import { startLoafObserver } from './loaf';
+// 外殼自己的樣式。走 JS import 而不是在 measure.html 手寫 <link>，理由與 panel.css 相同：
+// 這支檔案在 entry chunk 的 import graph 裡，build 會把它跟 panel.css 抽成同一份 CSS 資產
+// 並自動插進 dist 的 <head>。手寫 <link> 只會多一份要自己維護的路徑。
+// ⚠️ 樣式紀律（禁 transition / fixed / 盒模型 hover…）寫在 shell.css 的檔頭，動它之前先讀。
+import './shell.css';
 
 /**
  * LoAF 是否可用。判斷式跟 loaf.ts 裡的一樣 —— 那邊決定要不要註冊 observer，
@@ -71,8 +76,60 @@ function nowEpoch(): number {
   return performance.timeOrigin + performance.now();
 }
 
-const INITIAL_META = SPECIMENS[0];
-const INITIAL_MODE = firstMode(INITIAL_META);
+/**
+ * 深連結 `?specimen=<id>&mode=<modeId>` —— **B 類量測的正確性前提，不是便利功能。**
+ *
+ * B 類切 mode 會重載 iframe 的 document，但 iframe 與外殼共用同一條 renderer 主執行緒：
+ * 前一份 document 的拆除與殘留工作落在**新 document 的時鐘之內**，而 LCP 取的是
+ * `entry.startTime`（以新 document 的 timeOrigin 起算）。於是 LCP 帶著一個由
+ * 「前導 mode 有多重」決定的加項。
+ *
+ * 2026-07-26 實測，單一變因、零重疊：
+ *   標本 #2 的 fixed-virtual（141 個節點）
+ *     前導 broken                   LCP  1896 / 2616 / 2988 ms
+ *     前導 fixed-content-visibility LCP  9812 / 10620 / 16504 ms
+ *   差距全部落在新 document 的 responseEnd → DCL 之間（responseEnd 一律 13~262ms，
+ *   不是抓取問題），切換前插 15 秒靜置排不掉。同一份量測裡 141 個節點的 document
+ *   載入耗時是 40,021 個節點那份的五倍 —— 那個數字結構上不可能在描述標本。
+ *
+ * 舊的量測順序（每輪都 `for m of modes`）讓每個 mode 的前導永遠相同，**於是污染是常數**：
+ * 三輪離散度看起來很漂亮，而它靜靜地烙進臂間比值裡。輪轉順序只是把它掀開。
+ *
+ * 有了這個參數，每一筆 B 類樣本都從一次全新的 measure.html 導覽開始，
+ * 目標 mode 就是首載的那一份 document，前導成本歸零。
+ */
+function initialFromUrl(): { meta: SpecimenMeta; mode: string; cpu: CpuThrottle } {
+  const fallbackMeta = SPECIMENS[0];
+  const fallback = { meta: fallbackMeta, mode: firstMode(fallbackMeta), cpu: 'unknown' as CpuThrottle };
+  if (typeof location === 'undefined') return fallback;
+
+  const q = new URLSearchParams(location.search);
+
+  /**
+   * `cpu` 是**宣告**，跟下拉選單完全同一個語意（protocol.ts:55「無法從 JS 偵測」）。
+   * 它必須能從 URL 帶進來：deep-link 每量一筆就重載整個外殼，選單狀態隨之清空，
+   * 而「載入後再補按一次選單」那個 `evaluate()` 會插進正在量的載入期。
+   */
+  const wantCpu = q.get('cpu');
+  const cpu: CpuThrottle = wantCpu === '1x' || wantCpu === '4x' || wantCpu === '6x' ? wantCpu : 'unknown';
+
+  const wantSpecimen = q.get('specimen');
+  if (wantSpecimen === null) return { ...fallback, cpu };
+
+  // 認不得的 id 一律退回預設，不擲錯：量測工具打錯字時該看到「量到的是別的標本」，
+  // 而 snapshot.mode / snapshot.specimenId 會把它報出來
+  const meta = getSpecimen(wantSpecimen as SpecimenId);
+  if (meta === undefined) return { ...fallback, cpu };
+
+  const wantMode = q.get('mode');
+  const modeOk = wantMode !== null && meta.modes.some((m) => m.id === wantMode);
+  return { meta, mode: modeOk ? (wantMode as string) : firstMode(meta), cpu };
+}
+
+const INITIAL = initialFromUrl();
+const INITIAL_META = INITIAL.meta;
+const INITIAL_MODE = INITIAL.mode;
+const INITIAL_CPU = INITIAL.cpu;
 
 /** 面板真正吃到的東西。所有欄位都只透過 250ms 的節流閘門更新 */
 interface PanelBuffer {
@@ -106,10 +163,13 @@ function Metronome({ intervalMs, repetitions }: { intervalMs: number; repetition
     return () => window.clearInterval(id);
   }, [intervalMs, repetitions]);
 
-  if (tick >= repetitions) return <span>節拍結束（{repetitions} 拍）—— 按「重跑」開下一輪</span>;
+  if (tick >= repetitions) {
+    return <span className="shell-metro">節拍結束（{repetitions} 拍）—— 按「重跑」開下一輪</span>;
+  }
   return (
-    <span>
-      節拍 {tick % 2 === 0 ? '○' : '●'} 第 {tick} / {repetitions} 拍（每次記號翻面時點一下）
+    <span className="shell-metro">
+      節拍 <b className="shell-metro__mark">{tick % 2 === 0 ? '○' : '●'}</b> 第 {tick} /{' '}
+      {repetitions} 拍（每次記號翻面時點一下）
     </span>
   );
 }
@@ -119,7 +179,7 @@ export function App() {
   const [specimenId, setSpecimenId] = useState<SpecimenId>(INITIAL_META.id);
   const [mode, setMode] = useState<string>(INITIAL_MODE);
   const [runId, setRunId] = useState<string>(() => nextRunId());
-  const [cpuThrottle, setCpuThrottle] = useState<CpuThrottle>('unknown');
+  const [cpuThrottle, setCpuThrottle] = useState<CpuThrottle>(INITIAL_CPU);
   const [refreshHz, setRefreshHz] = useState(0);
   const [history, setHistory] = useState<RunResult[]>([]);
   /**
@@ -430,120 +490,213 @@ export function App() {
   const done = view.metrics?.totalInteractions ?? 0;
 
   return (
-    <main>
+    <main className="shell">
       {import.meta.env.DEV && (
-        // 唯一允許的 inline style 之一。dev server 不 minify、不打包、有 HMR 開銷 ——
-        // 這裡量到的東西不是效能數字，是 Vite 的效能數字（陷阱 #3）。
-        <p style={{ color: 'red' }}>
-          ⛔ 開發模式：這個頁面量到的數字全部無效。dev server 不 minify、不打包、還有 HMR 開銷，
-          而且函式名沒有經過 build 的 keepNames 路徑。量測前必須跑 <code>npm run measure</code>
-          （build + preview）。
+        // dev server 不 minify、不打包、有 HMR 開銷 —— 這裡量到的東西不是效能數字，
+        // 是 Vite 的效能數字（陷阱 #3）。所以這條警告的功能是「作廢通知」，
+        // 視覺上必須比頁面上任何東西都響，**不准因為變好看而變弱**。
+        <p className="shell-void">
+          <b className="shell-void__stamp">⛔ 檢驗無效 · DEV SERVER</b>
+          這個頁面量到的數字全部無效。dev server 不 minify、不打包、還有 HMR 開銷，
+          而且函式名沒有經過 build 的 keepNames 路徑。量測前必須跑{' '}
+          <code className="shell-void__cmd">npm run measure</code>（build + preview）。
         </p>
       )}
 
-      <h1>前端效能病理標本館 · Phase 0</h1>
+      <header className="shell-mast">
+        <p className="shell-mast__line">前端效能病理標本館</p>
+        <h1 className="shell-mast__name">量測台</h1>
+        <p className="shell-mast__meta">
+          Phase 3 · build <span className="shell-mono">{__BUILD_ID__}</span> · protocol v
+          {PROTOCOL_VERSION} —— 量測一律走{' '}
+          <code className="shell-code">npm run measure</code>（build + preview）。
+        </p>
+      </header>
+      <hr className="shell-rule" />
 
-      <h2>標本</h2>
-      <p>
-        {SPECIMENS.map((s) => (
-          <button key={s.id} onClick={() => switchSpecimen(s.id)} disabled={s.id === specimenId}>
-            {s.id} {s.title}
-          </button>
-        ))}
-      </p>
+      <nav className="shell-index" aria-label="標本索引">
+        <h2 className="shell-h">標本</h2>
+        <div className="shell-slots">
+          {/*
+            ⚠️ 按鈕的 textContent 是與量測工具的契約：`tools/reproducibility.mjs` 的
+            `ptShell()` 與 `tools/acceptance.mjs` 都用 `textContent.includes(...)` 找它，
+            比對字串逐字取自 `src/specimens.ts`。所以 `{s.id} {s.title}` 一個字都沒改，
+            只包了兩個 span 讓 CSS 能分別排版 —— 中間那個 `{' '}` 是原本就有的空白字元，
+            拿掉會讓 textContent 變成「01-main-thread-block主執行緒阻塞」。
+          */}
+          {SPECIMENS.map((s) => (
+            <button
+              key={s.id}
+              className="shell-slot"
+              onClick={() => switchSpecimen(s.id)}
+              disabled={s.id === specimenId}
+            >
+              <span className="shell-slot__no">{s.id}</span>{' '}
+              <span className="shell-slot__name">{s.title}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
 
-      <h2>
-        {meta.title} <small>{meta.subtitle}</small>
-      </h2>
+      <section className="shell-label">
+        <h2 className="shell-label__title">{meta.title}</h2>
+        <p className="shell-label__sub">{meta.subtitle}</p>
 
-      <h3>切換（{meta.switchKind === 'live' ? '即時切換，不重載' : '重載整個 iframe'}）</h3>
-      <ul>
-        {modes.map((m) => (
-          <li key={m.id}>
-            <button onClick={() => switchMode(m.id)} disabled={m.id === mode}>
-              {m.label}
-            </button>{' '}
-            {m.kind === 'pathological' ? '病變' : '治療'}
-            {m.requires?.map((r) => ` · ${REQUIRES_NOTE[r]}`).join('')}
-          </li>
-        ))}
-      </ul>
+        <h3 className="shell-h">
+          切換（{meta.switchKind === 'live' ? '即時切換，不重載' : '重載整個 iframe'}）
+        </h3>
+        <ul className="shell-modes">
+          {modes.map((m) => {
+            const lesion = m.kind === 'pathological';
+            return (
+              <li key={m.id} className="shell-mode">
+                {/*
+                  ⚠️ `{m.label}` 是這顆按鈕唯一的子節點。`ptShell()` 用**全稱**比對
+                  （標本 #6 有「治療二」與「治療二乙」，前綴比對會靜默誤擊），
+                  多一個字就點不到。「病變 / 治療」放按鈕外面，而且不寫成
+                  `病變：{m.label}` —— specimens.ts 的 label 本身已含前綴，
+                  那樣會變成「病變：病變：全部渲染」。
+                */}
+                <button
+                  className={`shell-mode__btn${lesion ? ' shell-mode__btn--lesion' : ''}`}
+                  onClick={() => switchMode(m.id)}
+                  disabled={m.id === mode}
+                >
+                  {m.label}
+                </button>
+                <span className={`shell-mode__kind${lesion ? ' shell-mode__kind--lesion' : ''}`}>
+                  {lesion ? '病變' : '治療'}
+                </span>
+                {m.requires !== undefined && m.requires.length > 0 && (
+                  <span className="shell-mode__req">
+                    {m.requires.map((r) => REQUIRES_NOTE[r]).join(' · ')}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
-      <h3>操作程序（凍結變因，spec §5.1 第 4 項）</h3>
-      <p>{meta.protocol.instruction}</p>
-      <p>
-        動作 {meta.protocol.action} · 次數 {meta.protocol.repetitions} · 間隔{' '}
-        {meta.protocol.intervalMs === null
-          ? '盡快連續（不要等畫面回應）'
-          : `${meta.protocol.intervalMs}ms`}
-      </p>
-      <p>
-        {/* 機器節拍的標本不渲染節拍器：它的 setInterval + 每拍一次 setState
-            會落在待量的那一段裡，而標本 #1 的兇手段正是 presentation。
-            人也照不了 17ms 的拍子 —— 照著做出來的是另一個實驗。 */}
-        {meta.protocol.intervalMs !== null && !meta.protocol.machinePaced && (
-          <Metronome
-            key={runId}
-            intervalMs={meta.protocol.intervalMs}
-            repetitions={meta.protocol.repetitions}
-          />
-        )}{' '}
-        已記錄 {done} / {meta.protocol.repetitions} 次
-      </p>
+      <div className="shell-stage">
+        <div className="shell-exhibit">
+          {/*
+            width / height 用 HTML 屬性寫死 800×600，取自 meta.viewport。
+            絕對不要用百分比或 vh：CLS = impact fraction × distance fraction，兩者都是 viewport
+            相對量，LCP element 的選擇也依賴 viewport —— 改尺寸等於讓所有歷史數字作廢（spec §4.6）。
+            外框（.shell-frame）視窗變窄時橫向捲，**不縮 iframe**；左欄的 800px 也是硬值，
+            CSS 那邊同樣不准出現 % / vw / transform: scale。
+          */}
+          <div className="shell-frame">
+            <iframe
+              key={meta.id}
+              ref={iframeRef}
+              src={iframeSrc}
+              width={meta.viewport.width}
+              height={meta.viewport.height}
+              title={`${meta.id} 實驗區`}
+            />
+          </div>
+          <p className="shell-caption">
+            viewport{' '}
+            <span className="shell-mono">
+              {meta.viewport.width}×{meta.viewport.height}
+            </span>{' '}
+            · 尺寸凍結 —— CLS 與 LCP 都是 viewport 相對量，改它等於讓已登記的數字作廢
+          </p>
 
-      <h3>凍結條件</h3>
-      <p>
-        <label>
-          CPU throttle（JS 偵測不到 DevTools 的設定，只能自己宣告）{' '}
-          <select value={cpuThrottle} onChange={(e) => setCpuThrottle(e.target.value as CpuThrottle)}>
-            {THROTTLE_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>{' '}
-        <button onClick={rerun}>重跑（把這一輪存進歷史，開新的一輪）</button>
-      </p>
-      <p>
-        <label>
-          <input
-            type="checkbox"
-            checked={validate}
-            onChange={(e) => toggleValidate(e.target.checked)}
-          />{' '}
-          web-vitals 交叉驗證（會重載 iframe）
-        </label>{' '}
-        —— 預設關閉：web-vitals 自己那組 observer 會污染 baseline，只在對帳時開（陷阱 #7）。
-        對帳結果同時進面板的 crossCheck 欄與 iframe 的 console.table。
-      </p>
+          <section className="shell-block">
+            <h3 className="shell-h">操作程序（凍結變因，spec §5.1 第 4 項）</h3>
+            <p className="shell-instruction">{meta.protocol.instruction}</p>
+            <p className="shell-note">
+              {/* intervalMs null 不一定是「盡快連續」：#5（idle）是「靜置三秒不要碰」、
+                  #6（stream）是「按一次然後放手」。這裡曾對兩者都印「盡快連續（不要等
+                  畫面回應）」—— 與 instruction 相反的指示，人手複驗會照著做錯事。
+                  「盡快連續」只對 click／scroll／type 的 null 成立（protocol.ts 的語意）。 */}
+              動作 {meta.protocol.action} · 次數 {meta.protocol.repetitions} · 間隔{' '}
+              {meta.protocol.intervalMs !== null
+                ? `${meta.protocol.intervalMs}ms`
+                : meta.protocol.action === 'idle'
+                  ? '—（零互動，沒有間隔可言）'
+                  : meta.protocol.action === 'stream'
+                    ? '—（單次觸發，之後由標本自行計時）'
+                    : '盡快連續（不要等畫面回應）'}
+            </p>
+            <p className="shell-pace">
+              {/* 機器節拍的標本不渲染節拍器：它的 setInterval + 每拍一次 setState
+                  會落在待量的那一段裡，而標本 #1 的兇手段正是 presentation。
+                  人也照不了 17ms 的拍子 —— 照著做出來的是另一個實驗。 */}
+              {meta.protocol.intervalMs !== null && !meta.protocol.machinePaced && (
+                <Metronome
+                  key={runId}
+                  intervalMs={meta.protocol.intervalMs}
+                  repetitions={meta.protocol.repetitions}
+                />
+              )}{' '}
+              <span className="shell-count">
+                {/* stream 的 done 數的是「按開始」那一下 —— repetitions 是 1，按下的
+                    瞬間就顯示 1/1，而量測窗才剛開始。idle 的 done 恆為 0，印 0/1
+                    會永遠像沒達標。兩者都不能沿用「已記錄 n / N」的達標語意。 */}
+                {meta.protocol.action === 'idle'
+                  ? '零互動標本 —— 不點不捲，樣本由標本自動記錄'
+                  : meta.protocol.action === 'stream'
+                    ? `已觸發 ${done} / ${meta.protocol.repetitions} 次 —— 量測窗這時才開始，由標本自行計時（外殼無從得知它何時結束）`
+                    : `已記錄 ${done} / ${meta.protocol.repetitions} 次`}
+              </span>
+            </p>
+          </section>
 
-      {/*
-        width / height 用 HTML 屬性寫死 800×600，取自 meta.viewport。
-        絕對不要用百分比或 vh：CLS = impact fraction × distance fraction，兩者都是 viewport
-        相對量，LCP element 的選擇也依賴 viewport —— 改尺寸等於讓所有歷史數字作廢（spec §4.6）。
-      */}
-      <iframe
-        key={meta.id}
-        ref={iframeRef}
-        src={iframeSrc}
-        width={meta.viewport.width}
-        height={meta.viewport.height}
-        title={`${meta.id} 實驗區`}
-      />
+          <section className="shell-block">
+            <h3 className="shell-h">凍結條件</h3>
+            <div className="shell-field">
+              <label className="shell-field__label">
+                CPU throttle（JS 偵測不到 DevTools 的設定，只能自己宣告）{' '}
+                {/* ⚠️ 整頁只准有這一個 <select>：tools/acceptance.mjs 與量測工具都用
+                    document.querySelector('select') 抓它來設 throttle 宣告值。 */}
+                <select
+                  className="shell-select"
+                  value={cpuThrottle}
+                  onChange={(e) => setCpuThrottle(e.target.value as CpuThrottle)}
+                >
+                  {THROTTLE_OPTIONS.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button className="shell-btn-primary" onClick={rerun}>
+                重跑（把這一輪存進歷史，開新的一輪）
+              </button>
+            </div>
+            <label className="shell-check">
+              <input
+                type="checkbox"
+                checked={validate}
+                onChange={(e) => toggleValidate(e.target.checked)}
+              />{' '}
+              web-vitals 交叉驗證（會重載 iframe）
+            </label>
+            <p className="shell-note">
+              —— 預設關閉：web-vitals 自己那組 observer 會污染 baseline，只在對帳時開（陷阱 #7）。
+              對帳結果同時進面板的 crossCheck 欄與 iframe 的 console.table。
+            </p>
+          </section>
+        </div>
 
-      <Panel
-        meta={meta}
-        mode={mode}
-        runId={runId}
-        conditions={conditions}
-        ready={view.ready}
-        metrics={view.metrics}
-        loaf={view.loaf}
-        loafSupported={LOAF_SUPPORTED}
-        history={history}
-        notes={view.notes}
-      />
+        <Panel
+          meta={meta}
+          mode={mode}
+          runId={runId}
+          conditions={conditions}
+          ready={view.ready}
+          metrics={view.metrics}
+          loaf={view.loaf}
+          loafSupported={LOAF_SUPPORTED}
+          history={history}
+          notes={view.notes}
+        />
+      </div>
     </main>
   );
 }

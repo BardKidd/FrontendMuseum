@@ -1,0 +1,12 @@
+{
+  "date": "2026-07-26",
+  "framework": "Vite 8 + React 19（MPA，vite.config.ts 掃 specimens/*.html 產生 entry）",
+  "fontStack": null,
+  "palette": null,
+  "motionLibrary": null,
+  "spacingScale": null,
+  "existingCss": "無 —— 整個專案零個 .css 檔，且是刻意的（index.html:10-14）",
+  "preserve": [],
+  "introduce": ["token 系統", "macrostructure", "slop-test gates"],
+  "hardConstraint": "零外部請求（spec §4.7 靜態資源必須自架；CDN 字體會污染量測）"
+}

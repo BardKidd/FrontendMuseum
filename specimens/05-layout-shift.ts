@@ -512,9 +512,16 @@ bootstrapSpecimen(mod);
  *
  * ───────────────────────── LCP：登記元素對，機制改寫 ─────────────────────────
  *
- * `secondaryMetrics` 有 LCP，而兩臂的 LCP 標的不同：
- *   `broken`      → `p#ls-caption`，size 159,152，約 120~145ms
- *   `fixed-*`     → `img#ls-figure`，size 100,200，約 375~410ms
+ * `secondaryMetrics` 有 LCP，而各臂的 LCP 標的不同。
+ *
+ * ⚠️ 2026-07-26 更正（規矩 4）：本段機制分析寫於梯度拆臂**之前**的兩臂設計，
+ * 原句「`fixed-*` → `img#ls-figure`，約 375~410ms」在拆成三段治療臂後只對
+ * 「預留全開」的臂成立。正典 JSON（2026-07-26-reproducibility-4x-5.json）的逐臂實錄：
+ *   `broken`       → `p#ls-caption`（72~108ms），size 159,152
+ *   `fixed-image`  → `div#ls-prose`（76~84ms）—— 只預留圖片時當選的是內文，
+ *                    不是圖片；此臂為何不是圖片（bpp 排除還是摺線裁切）**未反推**，僅實錄
+ *   `fixed-font` / `fixed-banner` → `img#ls-figure`（376~404ms），與下述 bpp 機制一致
+ * 絕對毫秒數屬該 session，跨 session 不可比；下述數值反推對應的是預留全開的臂。
  *
  * 2026-07-25 的草稿把這個差別解釋成「`aspect-ratio` 把空間預留出來之後，
  * 圖片才有資格當 LCP 標的」。**那句話沒有證據，而且方向是反的** ——

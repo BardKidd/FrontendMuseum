@@ -25,6 +25,9 @@ npm run build       # typecheck + vite build
 
 ### 驗收與量測（先讓 preview 在另一個終端機跑起來）
 
+開 `http://localhost:4173/` 是**首頁／標本索引**；**量測台在 `/measure.html`**
+（2026-07-26 對調，`tools/*.mjs` 的 `URL_SHELL` 與 `vite.config.ts` 的 `input.measure` 必須同步）。
+
 ```bash
 node tools/acceptance.mjs                    # spec §5.6 的 13 條驗收，全綠才算過
 node tools/reproducibility.mjs               # 全部標本，每個 mode 三輪
@@ -70,6 +73,57 @@ Event Timing 一筆都不回報。所以走 CDP 的 `Input.dispatchMouseEvent`�
 - **A 類**（`switchKind: 'live'`）：互動期指標（INP、forced layout、droppedFrames），原地切 mode
 - **B 類**（`switchKind: 'reload'`）：載入期指標（LCP、CLS）。**LCP 在第一次互動後定案且是 per-document 的**，
   所以切 mode 必須重載整份 document，不能原地切
+
+## 視覺設計系統（2026-07-26 定案，沿用勿另起爐灶）
+
+首頁 `/` 的設計是**已定案的系統**，不是一次性的頁面。Phase 3 之後的任何視覺工作
+（面板、標本頁的病理報告、OG image）都沿用它，不要重新挑一套。
+
+| 項目 | 定案 |
+|---|---|
+| 產生工具 | `nutlope/hallmark` skill（`~/.agents/skills/hallmark`） |
+| genre / macrostructure | editorial / **Stat-Led**（數字是論證，這正是專案的身份） |
+| theme | **Almanac** —— 暖燕麥紙、年鑑式的衡線與表格 |
+| nav / footer | **N6** 報頭 masthead / **Ft4** 密集 colophon（承載量測條件） |
+| accent | `oklch(45% 0.145 28)` 氧化血紅，anchor hue 28 |
+| 字體 | display 襯線 + body 無襯線 + mono outlier，全部**系統字體堆疊** |
+| token 來源 | 根目錄 `tokens.css`（可攜匯出）。樣式本身內嵌在 `index.html` 的 `<style>` |
+| 專案記憶 | `.hallmark/log.json` —— 下次跑 hallmark 會讀它來**輪替** macrostructure 與 theme |
+
+### 四條不准違反的設計約束
+
+1. **零外部請求。** 不准 CDN 字體、不准第三方分析、不准追蹤像素（spec §4.7）。
+   量測站點自己去要外部資源等於把污染源寫進實驗器材。
+   所以 Hallmark 的字體目錄（Google Fonts / Fontshare）**刻意繞過** ——
+   而且中日韓網頁字體是 5–15MB 等級，本來就不能用。
+2. **量測面不准隨手加 CSS。** `measure.html`、`src/shell/`、`specimens/` 是儀器。
+   要動先對照 `docs/superpowers/plans/baseline-shell-cost.md` 的基線（外殼 script median 0.00ms），
+   改完重量一次。首頁之所以可以放開手做，正因為它**不在量測路徑上**。
+3. **標本頁的樣式是實驗參數，不是裝飾。** 列高、寬度範圍、內文字數、`min-height`、viewport ——
+   改一個數字就讓已登記的量測作廢。視覺工作不要碰 `specimens/` 內部。
+4. **行銷面的數字必須可追溯到 `docs/measurements/`。** 首頁的每個數字都取自那份 JSON。
+   編一個好看的數字，會讓整個專案的可信度歸零 —— 那是這個站唯一的資產。
+
+### 中文排版：兩個踩過的坑
+
+- **不要用 `text-wrap: balance` 在標題上。** 那是拉丁文的功能，不懂中文詞界，
+  會把「不是一個應用程式」從「不 / 是」中間切開，比孤字更糟。
+- **正解是把詞組包成 `inline-block`**（`.nb { display: inline-block; }`），
+  瀏覽器只會在詞組**之間**斷。`index.html` 的 `.band-head` 就是這樣處理的。
+
+### 沿用時最容易違反的四道 gate
+
+實測抓到過，會再犯：
+
+- **可點擊文字不准斷成兩行**（375px 下最容易）。表格裡的連結用 `white-space: nowrap`，
+  外層 `overflow-x: auto` 讓它捲。
+- **點擊目標 ≥ 44px。** 用 `inline-flex` + `min-height` 撐，不要加 `padding-block`
+  （會把底線推離文字）。
+- **同一個狀態不准疊三種效果。** hover 只做顏色，位移留給 `:active`。
+- **間距一律走具名尺標**（`--space-*`），不要臨時填 `0.6rem`。
+
+驗證方式是實跑，不是看圖：用 CDP 在 320 / 375 / 414 / 768 量
+「水平捲動、`getClientRects().length > 1` 的可點擊元素、高度 < 44px 的可點擊元素」三項。
 
 ## 這個 repo 的規矩（違反就是錯的，不是風格問題）
 

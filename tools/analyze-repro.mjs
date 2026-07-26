@@ -125,6 +125,60 @@ function culpritOf(rec) {
   return known.reduce((a, b) => (b[1] > a[1] ? b : a))[0];
 }
 
+/**
+ * 登記的兇手 —— 從 `src/specimens.ts` 讀檔正則解析（2026-07-26 新增）。
+ *
+ * **為什麼要加這條。** 先前只判「三輪彼此一致」，判不出「三輪一致地推翻登記值」。
+ * 實例：標本 `01-main-thread-block` 的 `broken`，`src/specimens.ts` 曾登記
+ * `culprit: 'inputDelay'`，而 2026-07-25 的三輪原始資料是
+ * inputDelay 1.2~1.8 / processing 135~143 / presentation 1120~1240 ——
+ * **三輪一致地是 presentation**，舊判準照樣給過。
+ * 登記值整個被否證這件事，判準完全看不見；本 repo 的頭號規矩是「修變因不修結論」，
+ * 判準看不見登記值就等於少一道防線。
+ * （該筆登記值已於 2026-07-26 改為 `presentation`，理由寫在 `src/specimens.ts:64`。
+ *  所以現在跑既有資料時 #1 是「一致且等於登記值」，這條檢查是為了**下一次**。）
+ *
+ * **為什麼用讀檔正則而不是 import。** `specimens.ts` 是 TypeScript，本檔是不經建置的
+ * `.mjs`，`node` 直接 import 會炸；為了一個字串欄位去掛建置或 tsx，等於讓分析工具
+ * 依賴建置管線 —— 分析工具必須能對著任何一份歷史 JSON 單獨跑。
+ *
+ * **這個作法在什麼情況下會失效**（失效時一律回 null，退化成舊行為，不會誤報）：
+ *   1. 標本宣告不再長成 `export const X: SpecimenMeta = {`（改用陣列字面值、工廠函式、
+ *      或型別註記換名）⇒ 切不出區塊，整份讀到空的。
+ *   2. `culprit` 改用雙引號、常數引用、或計算值 ⇒ 抓不到。
+ *   3. `culprit` 若從標本層級搬到 mode 層級 ⇒ 這裡讀到的仍是標本層級那個（或 null），
+ *      必須同步改本函式。
+ *   4. `kind: 'pathological'` 的 mode 物件裡若出現巢狀大括號 ⇒ `[^{}]*` 匹配不到。
+ * 為了不讓失效變成靜默，下方會對「資料裡有、登記表裡查不到」的標本印警告。
+ */
+const INP_SEGMENTS = new Set(['inputDelay', 'processing', 'presentation']);
+
+function loadRegistry() {
+  const map = new Map();
+  let src;
+  try {
+    src = readFileSync(new URL('../src/specimens.ts', import.meta.url), 'utf8');
+  } catch {
+    return map; // 單獨拿走這支工具跑歷史資料時 registry 不在，照舊只判三輪一致
+  }
+  for (const block of src.split(/export const \w+\s*:\s*SpecimenMeta\s*=\s*\{/).slice(1)) {
+    const specimenId = block.match(/id:\s*'([^']+)'/)?.[1];
+    if (!specimenId) continue;
+    const culprit = block.match(/\n\s*culprit:\s*'([^']+)'/)?.[1] ?? null;
+    // 登記的 culprit 是**標本層級**欄位，講的是病變臂的兇手。治療臂的兇手本來就該搬家
+    //（那正是治療的定義：#3 修好 processing 之後最大段換成 presentation），
+    // 拿同一個登記值去比治療臂會製造假警報 —— 所以只認病變臂
+    const pathological = block.match(/\{[^{}]*kind:\s*'pathological'[^{}]*\}/)?.[0];
+    map.set(specimenId, {
+      culprit,
+      pathologicalMode: pathological?.match(/id:\s*'([^']+)'/)?.[1] ?? null,
+    });
+  }
+  return map;
+}
+
+const REGISTRY = loadRegistry();
+
 const bySpec = new Map();
 for (const rec of records) {
   const k = `${rec.specimenId}|${rec.mode}`;
@@ -144,6 +198,27 @@ for (const [k, recs] of bySpec) {
   const atFloor = range !== null && range <= cfg.floor;
   const culprits = recs.map(culpritOf).filter(Boolean);
   const culpritStable = culprits.length ? culprits.every((c) => c === culprits[0]) : null;
+
+  /*
+   * 三輪一致的兇手 vs 登記值。六個狀態刻意分開，不併成一個布林：
+   *   unstable                 三輪不一致（舊有的 ⚠不一致）
+   *   matches-registered       三輪一致且等於登記值 —— 過
+   *   differs-from-registered  三輪一致但不等於登記值 —— 新警示，登記的預期被否證
+   *   no-registered-value      這一臂沒有可比的登記值（治療臂；或標本沒登記 culprit）
+   *   not-an-inp-segment       登記值是 loaf / lcp / cls，不是 INP 三段之一
+   *                            （#2 #4 #5 #6），與 culpritOf 的輸出不同值域，比了沒意義
+   *   no-samples               三輪都沒有 INP 樣本（B 類、捲動類），兇手欄本來就是 —
+   * 後三者一律不報警 —— 誤報會讓真警示被當成雜訊。
+   */
+  const reg = REGISTRY.get(specimenId) ?? null;
+  const registeredCulprit = reg && reg.pathologicalMode === mode ? reg.culprit : null;
+  const culpritVsRegistered =
+    culpritStable === null ? 'no-samples'
+    : !culpritStable ? 'unstable'
+    : registeredCulprit === null ? 'no-registered-value'
+    : !INP_SEGMENTS.has(registeredCulprit) ? 'not-an-inp-segment'
+    : culprits[0] === registeredCulprit ? 'matches-registered'
+    : 'differs-from-registered';
 
   // 補充指標。沒有登記補充指標的標本一律是 null，**不是 0** ——
   // 0 會被讀成「量到了而且是零」，那正是本檔 clsValue 那條註解在防的錯
@@ -170,6 +245,8 @@ for (const [k, recs] of bySpec) {
       : dispersion <= cfg.threshold ? 'reproducible' : 'unstable',
     culprits,
     culpritStable,
+    registeredCulprit,
+    culpritVsRegistered,
     extraMetric: ex ? ex.label : null,
     extraValues: ex ? exVals : null,
     extraMedian: exMed,
@@ -183,6 +260,13 @@ for (const [k, recs] of bySpec) {
 }
 
 report.sort((a, b) => a.specimenId.localeCompare(b.specimenId) || a.mode.localeCompare(b.mode));
+
+// 解析失效不准靜默 —— 查不到登記值時上面每一列都會落到「不報警」的分支，
+// 看起來跟全過一模一樣。把查不到的標本印出來，讓「這條檢查沒在跑」是看得見的
+const unregistered = [...new Set(report.map((r) => r.specimenId))].filter((id) => !REGISTRY.has(id));
+if (unregistered.length) {
+  console.warn(`⚠ src/specimens.ts 解析不到這些標本的登記兇手，本輪對它們不做登記值比對：${unregistered.join(', ')}`);
+}
 
 // 病變 vs 治療的比值。病變版一律是每個標本的第一個 mode
 const ratios = [];
@@ -241,7 +325,11 @@ for (const r of report) {
   const vals = r.values.map((v) => (typeof v === 'number' ? (v < 1 ? v.toFixed(4) : v.toFixed(0)) : '—')).join(' / ');
   const disp = r.dispersion === null ? "—" : (r.dispersion * 100).toFixed(1) + "%" + (r.atFloor ? "▽" : "");
   const mark = r.verdict === 'reproducible' ? '✅' : r.verdict === 'unstable' ? '❌' : '⚠';
-  const cul = r.culpritStable === null ? '—' : `${r.culprits[0]}${r.culpritStable ? '' : ' ⚠不一致 ' + r.culprits.join(',')}`;
+  const cul = r.culpritVsRegistered === 'no-samples' ? '—'
+    : r.culpritVsRegistered === 'unstable' ? `${r.culprits[0]} ⚠不一致 ${r.culprits.join(',')}`
+    // 三輪一致地推翻登記值 ⇒ 要改的是登記值或實驗設計，不是把結論改成符合實測
+    : r.culpritVsRegistered === 'differs-from-registered' ? `${r.culprits[0]} ⚠登記為 ${r.registeredCulprit}`
+    : r.culprits[0];
   console.log(pad(r.specimenId, 24) + pad(r.mode, 26) + pad(vals, 30) + pad(disp, 10) + pad(mark + r.verdict, 14) + cul);
 }
 console.log('\n病變 vs 治療');

@@ -1,15 +1,75 @@
-# 交接紀錄 — 2026-07-26
+# 交接紀錄 — 2026-07-26（下午更新）
 
 > 給下一個 session。讀完這份 + `CLAUDE.md` 就能接手。
-> **舊版本（2026-07-25）已整份取代** —— 它停在「下一步是 Phase 1 的尾巴」，那些早就做完了。
+> ⚠️ 這份檔案上午的版本已被下面的「下午這一輪」整段補寫。
+> 底下「本輪（2026-07-26）做完的事」以下講的是**上午那一輪**，仍然有效，但不是最新狀態。
 
 ## 一句話現況
 
-**Phase 0 / 1 / 2 全部完成。** 六個標本齊備、三輪可重現量測跑過兩輪、
-第一篇文章已發出、四個「留待裁決」的設計缺陷本輪全部修掉並重新量過。
-**下一步是 Phase 3（內容化與上線）。**
+**Phase 3 進行中。** 第二篇文章已發出、面板與外殼的視覺設計完成、
+B 類量測的前導污染修好並重量、判準補了一條、29 條登記檔不一致逐條處置。
 
-`npm run acceptance` **13 / 13**。`npm run build` 綠。
+`npm run acceptance` **13 / 13**。外殼成本 4x median **0.00ms**（閘門是漲幅 > 2ms）。
+**現行正典原始資料：`docs/measurements/2026-07-26-reproducibility-4x-5.json`**（66 筆，完整掃描）。
+
+## 下午這一輪做完的事（八個 commit）
+
+| 工作 | 結果 |
+|---|---|
+| **B 類前導污染** | 根因：iframe 與外殼共用 renderer 主執行緒，前一份 document 的殘留落在新 document 的時鐘內。修法是外殼加 deep-link `?specimen=&mode=&cpu=`，每筆樣本全新導覽 + 一次丟棄的暖身。回歸測試 `tools/b-class-isolation.mjs` |
+| **完整重量** | #2 三臂全部可重現（先前判 unstable）。虛擬滾動 **2.0× → 23.3×** |
+| **判準** | `analyze-repro.mjs` 加「三輪一致的兇手 vs 登記值」，六種狀態分開 |
+| **第二篇文章** | `docs/articles/02-eight-verdicts-six-overturned.md` |
+| **面板視覺** | `Panel.tsx` 443 → 950 行 + `panel.css`。順帶修掉「B 類標本的載入期指標從來沒顯示過」 |
+| **外殼視覺** | `App.tsx` 雙欄 + `shell.css` 555 行 |
+| **未裁決清單** | `docs/open-questions.md` 29 條，逐條處置狀態 |
+| **首頁** | 六列數字全換到 `-5.json`，來源宣告同步 |
+
+## ⚠️ 接手前必須知道的（下午這一輪新增）
+
+1. **量測工具的座標不准快取。** `ptShell()` 會 `scrollIntoView`，而 iframe 內元素的座標
+   只在當下的捲動位置有效。外殼改雙欄後，按「重跑」會把 iframe 捲出視窗，
+   之後的點擊全部打空 —— 該輪零互動、不進歷史，**畫面上完全看不出異常**。
+   三處已修（`acceptance.mjs`、基線腳本 ×2），且 `ptIn()` 現在打不到東西時會擲錯。
+   **加任何新的量測腳本時，座標一律現算。**
+2. **驗收第 3b 條曾經會對壞掉的儀器打勾。** 它斷言「暖機期的點擊不入帳」，期望值是 0，
+   而點擊完全落空也是 0。現在靠 `ptIn()` 擲錯擋住。
+   **寫「期望值是零」的檢查時，先問「量不到也會是零嗎」。**
+3. ~~**比值判準刻意沒有裁決**（#4 / #5 / #6 共四條）。~~
+   **（2026-07-26 晚已定案）** 四條的數字與完整推導在 `phase2-expected-results.md`
+   追記「比值判準四條定案」：#4 ≥2×、#6 廢除法改雙絕對錨 240/150、
+   #5 受詞 fixed-banner、#6 renderRatio 改方向性。生效於**下一輪量測起**，
+   對既有兩份 JSON 不回溯 —— 引用現行資料時仍只報方向與絕對值。
+4. **標本 #2 的 LCP 標的是「請不要動」那段操作說明**，不是那 5000 列清單。
+   那段文字是量測器材自己的文案，改一個字就改變主指標的標的 ——
+   **它是一個從未登記的凍結變因。**
+5. **跨 session 比較治療臂的比值是無效的**（比「絕對值不可比」更強一級）。
+   病變臂飽和所以對機器速度不敏感、治療臂沒飽和所以敏感。
+   同一天同一台機器相隔六小時，#6 細粒度臂的掉幀 85/59/84 → 14/18/18 而工作量一格沒動。
+6. **標本 #1 的兇手是機器速度的函數。** 機器快到能在排隊的點擊之間塞進一次 paint 時，
+   排隊就從 `presentation` 浮出來變成 `inputDelay`。這支標本正好卡在界線上。
+   登記值 `presentation` 是較慢的機器量出來的，留待下一輪裁決。
+
+## 下一步
+
+- ~~**六份病理報告**~~ **（2026-07-26 晚完成）** —— `docs/reports/01~06`，六份全依模板
+  八節、實測數字全部出自 `-5.json` 並逐筆附欄位路徑。撰寫時逐條對數又開出
+  `open-questions.md` **第十一節**（30~39）：已修三條（#5 檔尾註解、phase2:1126 標錯、
+  #6 欄位漂移補記）、五條儀器面待處置（A 類 CLS 殘留、#2 副標反向、LoAF 進臂殘留、
+  `forcedPeak` 三態、JSON 缺 `protocolVersion`/viewport 欄）——**不擋發表**，報告已就地加警語。
+  另有五條裁決在 `phase2` 檔尾「補充 · 報告撰寫輪帶出的五條裁決」
+  （observer ≈1 錨作廢、方向性判準雜訊帶但書、#6 兩條舊絕對帶作廢等）
+- **`docs/open-questions.md` 已全部結案**（2026-07-26 晚）。八.21~23：協定 `action` 加
+  `'idle'`、#5 改登記 idle（程序本身沒變）、面板間隔欄與計數欄照 action 分開解釋。
+  三.8~11：四條比值判準已定案（見上方「接手前必須知道的」第 3 條）——
+  病理報告的兩個前置全部清掉
+- **部署**：目前**沒有任何部署設定檔**。零外部請求已實測乾淨，
+  `vite.config.ts` 的 `keepNames` 三處都在、worker 有獨立一份
+- OG image、「為什麼做這個」總覽文章
+
+---
+
+（以下為上午那一輪的紀錄，仍然有效）
 
 ## 本輪（2026-07-26）做完的事
 
@@ -46,9 +106,15 @@
 
 ## ⚠️ 接手前必須知道的四件事
 
-1. **`02-long-list` 本輪判 unstable，而它一個字都沒改。**
-   `broken` 離散度 34.0%（1872/2620/2200）、`fixed-virtual` 110.7%（932/1236/**204**）。
-   204ms 那一輪疑似 B 類輪替下的 LCP 取樣問題。**不要拿本輪的 #2 數字發表。**
+1. ~~**`02-long-list` 本輪判 unstable，不要拿本輪的 #2 數字發表。**~~
+   **（2026-07-26 稍晚解除）** 查出來不是標本不穩，是 **B 類前導污染** ——
+   iframe 與外殼共用同一條 renderer 主執行緒，前一份 document 的殘留工作落在
+   新 document 的時鐘之內，而 LCP 以新 document 的 timeOrigin 起算。
+   已修（deep-link `?specimen=&mode=&cpu=`，每筆樣本全新導覽 + 丟棄式暖身），
+   回歸測試是 `tools/b-class-isolation.mjs`。修完 **#2 / #5 七臂全部可重現**，
+   數字可發表，取 `docs/measurements/2026-07-26-reproducibility-4x-5.json`。
+   完整診斷與作廢清單在 `docs/phase2-expected-results.md` 的
+   「修正紀錄 · B 類前導污染」。
 2. **`01` 的 `fixed-worker` 沒通過「三輪兇手一致」**（inputDelay/presentation/inputDelay）。
    那一臂本輪不得單獨發表。處置順序寫在 `docs/phase1-expected-results.md`。
 3. **4x CPU 節流套不到 worker 執行緒。** `Emulation.setCPUThrottlingRate` 掛在 renderer
@@ -67,6 +133,19 @@
 **但它的標題與骨架受影響**：《十二段治療處方，站得住的有四段》與
 「這篇文章講的是下面那八格」—— #5 那一格已翻案、#6 的兩個結論也翻案。
 **第二篇文章的骨架就是這件事**：修完再量一次，八格裡有幾格翻案。
+
+## 路由（2026-07-26 對調）
+
+| URL | 內容 |
+|---|---|
+| `/` | **首頁／標本索引**（推廣入口，Hallmark 產的 Stat-Led + Almanac） |
+| `/measure.html` | **量測台**（外殼 + iframe，仍是零 CSS 的 `<pre>` 面板） |
+| `/specimens/*.html` | 標本頁，不受影響 |
+
+⚠️ 三處必須同步，不同步的話量測會開到首頁去：
+`vite.config.ts` 的 `input.measure`、`tools/acceptance.mjs` 與 `tools/reproducibility.mjs` 的 `URL_SHELL`。
+對調後實跑驗證：`npm run acceptance` **13 / 13**，驅動器煙霧測（校準標本三輪）錨點 A 對得上
+（`busy-300` → processing 300.8~303.1ms，登記 300）。
 
 ## 下一步：Phase 3
 
@@ -88,13 +167,24 @@ Phase 3 要動面板 CSS 時就是回去接它的時候。
 ⚠️ 該計畫的 Global Constraints 已失真（它寫「這個目錄不是 git repo」「這輪不提交」，
 實際上是 repo、有 remote、已 push）。
 
-## 未提交的改動
+## 提交狀態
 
-本輪全部**尚未 commit**（使用者未要求）。橫跨：
-`specimens/01,04,05,06`、`src/{protocol,specimens}.ts`、`src/shell/App.tsx`、
-`src/measure/vitals.ts`、`tools/{reproducibility,analyze-repro}.mjs`、
-`docs/phase{1,2}-expected-results.md`、`docs/measurements/2026-07-26-*.json`、
-新增的 `CLAUDE.md` 與本檔。
+本輪全部**已 commit 並 push** 到 `phase1-2/specimens-and-measure`（追蹤 `origin`）。
+按工作線拆成十一個 commit：
 
-另有兩份 session 開始前就在的 `shell-visual` 工作線改動
-（`docs/superpowers/plans/` 底下兩個檔），**與本輪無關，拆 commit 時要分開。**
+```
+b0441f8  docs(CLAUDE.md)    首頁的視覺設計系統定案
+cc94a68  docs               HANDOFF 的提交狀態校正
+2c5212a  refactor(routing)  首頁移到 /，量測台移到 /measure.html
+78f88e5  feat(home)         首頁與標本索引（Hallmark · Stat-Led + Almanac）
+6f12263  docs(shell-visual) Task 1 基線 —— 另一條工作線，刻意單獨一個
+2b14dd4  docs               CLAUDE.md
+f3fdb77  docs               重新登記 + 實測結果 + 作廢清單
+653b15d  fix(tools)         絕對排程、檔名不再覆蓋原始資料、補充指標
+fe4f795  fix(specimens)     四個設計缺陷
+1a613da  feat(protocol)     machinePaced 欄位
+9ecbaf8  fix(tools)         （上一輪）量測工具自身的四個缺陷
+```
+
+**尚未合併回 `main`** —— `main` 還停在 `0014c92`（Phase 0 baseline）。
+PR：`https://github.com/BardKidd/FrontendMuseum/pull/new/phase1-2/specimens-and-measure`
