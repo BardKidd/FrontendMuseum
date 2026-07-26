@@ -135,6 +135,16 @@ export interface SpecimenMeta {
     intervalMs: number | null;
     /** '每次節拍亮起時點一下，共十次' */
     instruction: string;
+    /**
+     * 這個間隔是**機器節拍**，人手做不到（2026-07-26 新增欄位）。
+     *
+     * 為真時外殼**不渲染節拍器**：節拍器的用途是替人打拍子，而人照著它做出來的
+     * 是另一個實驗；更嚴重的是它的 `setInterval` + 每拍一次 `setState` 會落在
+     * 待量的那一段裡 —— 標本 #1 的兇手段正是 `presentation`，節拍器等於直接往裡面加料。
+     *
+     * 省略 = false = 人手做得到，照舊渲染節拍器。加欄位不改既有語意。
+     */
+    machinePaced?: boolean;
   };
 
   /** 凍結。CLS 與 LCP 都依賴 viewport，改這裡等於讓歷史數字作廢 */
