@@ -9,6 +9,9 @@
 **Phase 3 完成（2026-07-27）。站已上線：<https://frontendmuseum.pages.dev>。**
 六份病理報告、三篇文章、判準定案並首次全過、儀器修正、部署驗收全綠、OG image —— 全數收尾。
 掛帳不擋事的只剩：人手複驗、自訂網域（可選）、chrony 治本（見部署一節）。
+**（2026-07-27 追加）六份病理報告已上站**：`/reports/`（`tools/build-reports.mjs` 從
+`docs/reports/*.md` 生成進 `public/reports/`，報告改了跑 `npm run build:reports` 重生再 commit）；
+首頁表格與量測台都有連結。量測台報頭的「npm run measure」已改成訪客語言。
 
 `npm run acceptance` **13 / 13**。外殼成本 4x median **0.00ms**（閘門是漲幅 > 2ms）。
 **現行正典原始資料：`docs/measurements/2026-07-26-reproducibility-4x-6.json`**
