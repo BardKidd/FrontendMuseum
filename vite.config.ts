@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 const root = import.meta.dirname;
 
 /**
@@ -25,7 +27,7 @@ function specimenEntries(): Record<string, string> {
 const buildId = `${process.env.npm_package_version ?? '0.0.0'}-${Date.now().toString(36)}`;
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), cloudflare()],
 
   define: {
     __BUILD_ID__: JSON.stringify(buildId),
