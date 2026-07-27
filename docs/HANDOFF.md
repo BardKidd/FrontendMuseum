@@ -69,12 +69,13 @@ B 類量測的前導污染修好並重量、判準補了一條、29 條登記檔
   `'idle'`、#5 改登記 idle（程序本身沒變）、面板間隔欄與計數欄照 action 分開解釋。
   三.8~11：四條比值判準已定案（見上方「接手前必須知道的」第 3 條）——
   病理報告的兩個前置全部清掉
-- **部署**：目前**沒有任何部署設定檔**。零外部請求已實測乾淨，
-  `vite.config.ts` 的 `keepNames` 三處都在、worker 有獨立一份
-- OG image、「為什麼做這個」總覽文章
-- **首頁六列數字還指著 `-5.json`**：來源宣告寫在頁上所以仍然可追溯、不算錯，
-  但正典已換 `-6.json`（虛擬滾動 23.3× → 20.1× 等）。要不要換成新正典是行銷面決定 ——
-  換就連來源宣告一起換，並留意 #5 的凍結前後不可互比
+- ~~**部署**~~ **（2026-07-27 上線）** <https://frontendmuseum.pages.dev>，
+  上線驗收全綠 —— 見文末「部署」一節（含三件接手必知與時鐘事件）
+- ~~「為什麼做這個」總覽文章~~ **（已定稿）** `docs/articles/03-why-this-museum.md`，
+  含對第一篇 checksum 54168 的規矩 5 更正
+- ~~首頁六列數字還指著 `-5.json`~~ **（已換 `-6.json`）** 六列與來源宣告逐筆換畢
+- **還剩：OG image**（Phase 3 最後一項）；掛帳不急：人手複驗、自訂網域（可選）、
+  chrony 治本設定（見部署一節時鐘事件）
 
 ---
 
@@ -198,3 +199,35 @@ fe4f795  fix(specimens)     四個設計缺陷
 ~~尚未合併回 `main`~~ **已於 2026-07-26 併回 `main`**（PR #2，merge commit `3760907`，
 含到 `cc72e39` 為止的全部工作：面板修正、判準定案、六份病理報告）。
 **之後直接在 `main` 開發、直接推**，不再開分支；`phase1-2/specimens-and-measure` 保留作歷史。
+
+## 部署（2026-07-27 上線）
+
+**<https://frontendmuseum.pages.dev>** —— Cloudflare Pages，連 GitHub `main`，
+**push 即自動部署**（build `npm run build`、輸出 `dist`、preset None、`NODE_VERSION=22`）。
+
+### 上線驗收（全綠，當天實跑）
+
+- 13 條驗收原封對生產站跑：**13/13**（校準錨點 busy-300 → 304ms ×3、離散 0.0%）。
+  作法：複製 `tools/acceptance.mjs`、把 `URL_SHELL` 換成生產網址跑，不回寫 repo。
+- 零外部請求實抓（CDP 收集全部網路請求）：`/`、`/measure.html`、標本頁、404 頁全綠。
+  `<link rel="icon" href="data:,">` 是壓 favicon 自動請求的技巧，data URI 零流量，不是違規。
+- 亂打路徑回 **404**（`/this-path-must-404`）。
+
+### ⚠️ 三件接手必知
+
+1. **`public/404.html` 不是裝飾，是開關。** CF Pages 在輸出目錄沒有 404.html 時
+   **自動啟用 SPA fallback**（未命中一律回 index、HTTP 200）—— 上線當天實測抓到，
+   加了 404.html 才關掉。刪掉它 = 重新打開 catch-all rewrite。
+2. **CF 會把 `.html` 正規化成無副檔名網址**（`/measure.html` → 308 → `/measure`）。
+   一次性重導、瀏覽器會跟，站內寫死的 `.html` 連結照常可用；此行為無開關，接受即可。
+3. **Web Analytics 永不開、`_redirects` 永不加。** 前者注入 beacon script（違反零外部請求），
+   後者是 rewrite 的入口。Speed 類優化只掛在自訂網域的 zone 上，`pages.dev` 碰不到。
+
+### ⚠️ 量測機時鐘事件（2026-07-27）
+
+這台 QEMU VM 的時鐘曾慢 **41,901 秒（11.6 小時）**：chrony 知道偏差但開機後只肯慢滑
+（4.6ppm，要滑數年），是部署驗收的 TLS 檢查（憑證被判「尚未生效」）把它揪出來的。
+已用 `sudo chronyc makestep` 跳正。**影響範圍**：既有 JSON 的 `measuredAt` 與文件日期
+都蓋著慢約 12 小時的章（「2026-07-26 晚」實為 07-27 早），相對量測與檔案間先後順序不受影響，
+文件不回改。**VM 暫停/恢復會再漂** —— 治本是 `/etc/chrony/chrony.conf` 加一行
+`makestep 1 -1`（任何時候允許跳時），尚未做。
