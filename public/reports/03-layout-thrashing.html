@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>03 強制同步版面重排（Layout Thrashing） · 前端效能病理標本館</title>
+<style>
+  :root {
+    --paper:   oklch(97%   0.008 80);
+    --paper2:  oklch(94.5% 0.011 78);
+    --rule:    oklch(84%   0.010 70);
+    --rule2:   oklch(90%   0.008 74);
+    --neutral: oklch(58%   0.009 60);
+    --muted:   oklch(43%   0.009 55);
+    --ink:     oklch(21%   0.011 45);
+    --accent:  oklch(45%   0.145 28);
+    --focus:   oklch(52%   0.170 28);
+    --serif: ui-serif, "Noto Serif CJK TC", "Noto Serif TC", Georgia, serif;
+    --sans:  ui-sans-serif, system-ui, "Noto Sans CJK TC", sans-serif;
+    --mono:  ui-monospace, "Noto Sans Mono CJK TC", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); line-height: 1.75; font-size: 1rem;
+    -webkit-text-size-adjust: 100%;
+  }
+  .page { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+  .mast { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.05em;
+    color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem;
+    justify-content: space-between; }
+  .mast a { display: inline-flex; align-items: center; min-height: 44px;
+    color: var(--accent); white-space: nowrap; text-underline-offset: 0.2em; }
+  .mast a:hover { color: var(--focus); }
+  .rule  { border: 0; border-top: 3px solid var(--ink);  margin: 0.5rem 0 0; }
+  .rule2 { border: 0; border-top: 1px solid var(--rule); margin: 4px 0 2rem; }
+  h1 { font-family: var(--serif); font-size: 1.9rem; line-height: 1.3; margin: 0 0 1rem; }
+  h2 { font-family: var(--serif); font-size: 1.35rem; line-height: 1.35;
+    margin: 2.5rem 0 0.75rem; padding-top: 1rem; border-top: 1px solid var(--rule2); }
+  h3 { font-family: var(--serif); font-size: 1.1rem; margin: 2rem 0 0.5rem; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
+  p { margin: 0.75rem 0; }
+  a { color: var(--accent); }
+  a:hover { color: var(--focus); }
+  blockquote { margin: 1rem 0; padding: 0.25rem 1rem;
+    border-left: 3px solid var(--accent); background: var(--paper2);
+    color: var(--muted); }
+  blockquote p { margin: 0.5rem 0; }
+  code { font-family: var(--mono); font-size: 0.875em;
+    background: var(--paper2); padding: 0.1em 0.35em; border-radius: 3px;
+    overflow-wrap: anywhere; }
+  pre { background: var(--paper2); border: 1px solid var(--rule2);
+    padding: 0.75rem 1rem; overflow-x: auto; line-height: 1.6; }
+  pre code { background: none; padding: 0; overflow-wrap: normal; }
+  h1, h2, h3, h4, p, li { overflow-wrap: anywhere; min-width: 0; }
+  .rlist { list-style: none; padding: 0; }
+  .rlist li { overflow-x: auto; margin: 0; }
+  .rlist a { display: inline-flex; align-items: center; min-height: 44px;
+    white-space: nowrap; }
+  .tw { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; font-size: 0.9rem; min-width: 100%; }
+  th, td { text-align: left; padding: 0.45rem 0.75rem; vertical-align: top;
+    border-bottom: 1px solid var(--rule2); }
+  th { font-family: var(--mono); font-weight: 600; font-size: 0.8rem;
+    letter-spacing: 0.04em; color: var(--muted);
+    border-bottom: 2px solid var(--rule); white-space: nowrap; }
+  ul, ol { padding-left: 1.5rem; }
+  li { margin: 0.35rem 0; }
+  strong { font-weight: 650; }
+  .foot { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 0.8rem; color: var(--neutral); }
+  .foot a { white-space: nowrap; display: inline-flex; min-height: 44px;
+    align-items: center; margin-right: 1.25rem; }
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="mast" aria-label="站內">
+  <a href="/">← 標本索引</a>
+  <a href="/reports/">病理報告目錄</a>
+  <a href="/measure.html">量測台 →</a>
+</nav>
+<hr class="rule"><hr class="rule2">
+<h1>病理報告 · 03 強制同步版面重排（Layout Thrashing）</h1>
+<blockquote>
+<p>實測數字<strong>只取自</strong> <code>docs/measurements/2026-07-26-reproducibility-4x-5.json</code>
+（2026-07-26T05:52:29.671Z 的完整掃描，<code>sweep.problems</code> 為空陣列 = 無異常輪，
+<code>sweep.consoleErrors</code> 為空）。其他 session 的數字只以「另一 session」或「已作廢」
+的身分出現，並逐一標明來源。跨 session 絕對值不可比（<code>phase1:455-456</code>、<code>phase2:944-945</code>）。</p>
+</blockquote>
+<h3>03 強制同步版面重排（Layout Thrashing）</h3>
+<p><strong>病症一句話</strong>：對 800 列的清單交替「讀 <code>offsetHeight</code>、寫 <code>width</code>」，
+每次點擊觸發<strong>中位 829~964ms</strong> 的強制同步版面重排（本 session、4x 宣告節流，
+三輪 <code>forcedMedian</code>：<code>records[mode=broken,run=1..3].forcedMedian</code>）；
+讀寫分離之後，<strong>三輪皆無任何強制版面幀</strong>（<code>records[mode=fixed-batched,run=1..3].forcedMedian</code> 皆 <code>null</code>）。</p>
+<blockquote>
+<p>⚠️ 方法論警語（跨 session，各自標明來源）：這句話<strong>必須標 session</strong>。
+同一份程式一個字沒改，三次量測的 broken forced median 分別是
+744.5 / 716.4 / 678.3（2026-07-25 session，<code>docs/measurements/2026-07-25-reproducibility-4x.json</code>，
+經 <code>phase2:1234-1253</code> 裁決為現行有效組）、
+1158 / 1274 / 1376（2026-07-26 上午 session，<code>docs/measurements/2026-07-26-reproducibility-4x.json</code>，
+登記於 <code>phase1:448-449</code>、<code>phase2:941-942</code>）、
+828.85 / 953.75 / 964.45（<strong>本份 JSON</strong>）—— 最大與最小差約兩倍，
+而每個 session 內部離散度都通過判準。不標條件的那個數字會被當成這個病的常數。</p>
+<p>⚠️「一幀都不再產生」這種絕對句也要標 session：0725 是兩輪零幀、一輪有幀，
+0726 上午三輪都有幀（0.1 / 0.1 / 0.4ms，出處：模板已填範例的治療梯度警語），
+<strong>本份 JSON 三輪零強制版面幀</strong>。同一句話在三個 session 有三種真值。</p>
+</blockquote>
+<h4>凍結條件</h4>
+<p>同一組條件之間才能比較。任何一項改動，先前所有數字作廢。</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CPU throttle</td>
+<td>4x —— <strong>宣告值</strong>（<code>records[*].cpuThrottle</code>、<code>sweep.cpuThrottlingRate=4</code>）。JS 偵測不到（<code>protocol.ts:55</code>「無法從 JS 偵測，只能由使用者宣告」），且<strong>本份 JSON 內部沒有 1x 臂，無法從資料檢核節流是否真的套用</strong></td>
+</tr>
+<tr>
+<td>驅動方式</td>
+<td>CDP 機器驅動（<code>sweep.driver</code>：<code>Input.dispatchMouseEvent</code>），非人手</td>
+</tr>
+<tr>
+<td>viewport</td>
+<td>800 × 600（<code>src/specimens.ts:10</code> 的 <code>FROZEN_VIEWPORT</code>，經 <code>:183</code> 掛進本標本 meta；records 未記錄此欄）</td>
+</tr>
+<tr>
+<td>refreshHz</td>
+<td>60（<code>records[*].refreshHz</code>，六筆一致）</td>
+</tr>
+<tr>
+<td>操作程序</td>
+<td>click · 10 次 · 間隔 2500ms（<code>src/specimens.ts:176-181</code>）。節拍護欄：<code>dispatchSpanNominalMs</code> 25000，實測 <code>dispatchSpanMs</code> 24999.5~25002.4（六筆），偏差 ≤ 2.4ms —— 節拍確實交付。本標本走間隔迴圈而非絕對排程，名目值定義為 reps × I（<code>tools/reproducibility.mjs:658-663</code> 的註解）</td>
+</tr>
+<tr>
+<td>buildId</td>
+<td><code>0.1.0-ms191c71</code>（<code>records[*].buildId</code>，六筆一致）</td>
+</tr>
+<tr>
+<td>protocolVersion</td>
+<td>1（<code>src/protocol.ts:8</code> 的 <code>PROTOCOL_VERSION</code> 常數）。⚠️ 本份 records <strong>沒有這個欄位</strong>，此值取自程式碼，不是取自量測資料</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p>⚠️ 方法論警語（來源：模板已填範例，教訓出自 0725/0726 兩個 session）：
+先前版本的報告曾有一段「4x 對 1x 的換算檢核：比值 4.0× ⇒ 節流確實生效」，<strong>已刪除</strong>。
+它是跨 JSON 相除（1x 探針來自 <code>phase1:237-243</code> 的拋棄式量測、4x 來自另一 session 另一個 buildId），
+而同一個算式在 0726 上午那輪給出 7.12× —— 兩個獨立浮動量的商不是檢核。
+本份 JSON 同樣沒有 1x 臂，所以 throttle 這一格<strong>只能是宣告</strong>。
+要真的檢核，得在同一次 session、同一份 JSON 裡跑一支 1x 臂。</p>
+</blockquote>
+<h4>動工前登記的預期</h4>
+<blockquote>
+<p>登記出處：<code>docs/phase1-expected-results.md:142-210</code>（標本 #3 段，動工前盲預測）。
+<strong>這一節不准回頭改去迎合實測。</strong> 修正只出現在該檔「修正紀錄」（<code>phase1:218-263</code>）。</p>
+</blockquote>
+<ul>
+<li>主指標 <code>loaf.forcedStyleAndLayout</code>（<code>src/specimens.ts:166</code>），
+預期 broken <strong>200<del>500ms（1x）／600</del>2000ms（4x）</strong>（<code>phase1:180-182</code>）</li>
+<li>INP 預期 broken 250<del>600ms（1x）／700</del>2200ms（4x），fixed &lt; 60ms（1x）／&lt; 100ms（4x）（<code>phase1:183-185</code>）</li>
+<li>治療預期 fixed-batched forced &lt; 10ms（1x）／&lt; 25ms（4x）（<code>phase1:184</code>）</li>
+<li>兇手段預期 <strong>processing</strong> —— 與標本 #1 形成對照（<code>phase1:189-191</code>；#1 的兇手後來
+經 <code>phase1:272-307</code> 改判為 <code>presentation</code>，對照本身仍成立，見 <code>phase1:301-304</code>）</li>
+<li>病變 vs 治療比值預期 <strong>&gt; 20×</strong>（<code>phase1:187</code>，照抄 <code>spec:1353</code>）。
+⚠️ 判準現況：<code>phase2:1259-1338</code> 檔尾追記只作廢／改判 #4、#5、#6 的比值判準
+（生效範圍 <code>phase2:1334-1338</code>），<strong>#3 的 &gt; 20× 未被追記推翻，現行有效</strong></li>
+<li>登記在案的風險（<code>phase1:195-210</code>）：#1 N=800 打不到量級、
+<strong>#2 治療版可能不是數字小，是沒有數字</strong>、#3 外殼貢獻混入 forced 欄、
+#4 寫入值相同導致病變版「安靜地治好自己」</li>
+<li>動工時補登（<code>phase1:226-228</code>）：<code>intervalMs: 2500</code>（間隔必須大於 4x 病變上限，
+否則事件排隊、兇手翻成 inputDelay）、<code>repetitions: 10</code>、行高 24px 寫死</li>
+</ul>
+<h4>實測</h4>
+<p>三輪，同一組凍結條件。<strong>離散度算在每輪的 median 上，不是 max</strong> ——
+<code>protocol.ts:309</code>：「抗離群。可重現性判定用這個，不用 max」（模板引用的 <code>:290</code> 已漂移，
+內容同一句）。相對離散度 =（三輪 max − 三輪 min）÷ 三輪的 median。</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>mode</th>
+<th>三輪 forced median</th>
+<th>相對離散度</th>
+<th>絕對全距</th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>broken 交替讀寫</td>
+<td>828.85 / 953.75 / 964.45 ms</td>
+<td>14.2%（= 135.6 ÷ 953.75）</td>
+<td>135.6ms</td>
+<td>✅ 可重現</td>
+</tr>
+<tr>
+<td>fixed-batched 讀寫分離</td>
+<td><strong>無 entry / 無 entry / 無 entry</strong></td>
+<td>—（無 entry，無離散度可算）</td>
+<td>—</td>
+<td>✅ 可重現（三輪一致零幀）</td>
+</tr>
+</tbody></table></div>
+<p>出處：<code>records[mode=broken,run=1..3].forcedMedian</code>、<code>records[mode=fixed-batched,run=1..3].forcedMedian</code>（皆 <code>null</code>）。</p>
+<blockquote>
+<p>⚠️ <code>null</code> 是「沒有產生任何強制版面幀」，不是「量到 0」。
+治療臂三輪 <code>forcedSamples</code> 皆為空陣列；第一輪的 <code>forcedPeak</code> 是 0、後兩輪是 <code>null</code>，
+這個差別有意義，見兇手歸因的警語。
+模板前言明文：「未量測」與「量到 0」是兩件事，
+「標本 #3 治療版的全部結論就建立在這個區別上」。</p>
+</blockquote>
+<p>INP median 另計（<code>records[*].stats.median</code>，每輪 10 次互動的 median；
+<code>inp</code> 欄本身是 max 不是 p98，六筆 <code>isMaxNotP98</code> 皆 <code>true</code>）：</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>mode</th>
+<th>三輪 INP median</th>
+<th>相對離散度</th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>broken</td>
+<td>892 / 1016 / 1032 ms</td>
+<td>13.8%（= 140 ÷ 1016）</td>
+<td>✅ 可重現</td>
+</tr>
+<tr>
+<td>fixed-batched</td>
+<td>48 / 48 / 48 ms</td>
+<td>0.0%</td>
+<td>✅ 可重現</td>
+</tr>
+</tbody></table></div>
+<p>臂間比值 <strong>21.2×</strong>（= 1016 ÷ 48，兩臂各取三輪 median 的中位，同一份 JSON 內部）。
+治療臂 48ms 高於 INP 雜訊底線 16ms，比值可報。</p>
+<h4>兇手歸因</h4>
+<p>代表互動（INP 那一筆）的三段拆解，<code>records[*].inputDelay / .processing / .presentation</code>：</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>broken</th>
+<th>fixed-batched</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>inputDelay</td>
+<td>2.8 / 3.6 / 4.4 ms</td>
+<td>2.1 / 2.0 / 1.8 ms</td>
+</tr>
+<tr>
+<td>processing</td>
+<td>1215.5 / 1725.3 / 1396.3 ms</td>
+<td>10.5 / 9.0 / 10.1 ms</td>
+</tr>
+<tr>
+<td>presentation</td>
+<td>29.7 / 31.1 / 31.3 ms</td>
+<td>43.4 / 69.0 / 44.1 ms</td>
+</tr>
+<tr>
+<td>LoAF forcedStyleAndLayout（僅標本自己的 script）</td>
+<td>median 828.85 / 953.75 / 964.45 ms</td>
+<td>無 entry / 無 entry / 無 entry</td>
+</tr>
+<tr>
+<td>sourceFunctionName</td>
+<td><code>interleavedReadWrite</code>（三輪）</td>
+<td>見下方警語</td>
+</tr>
+</tbody></table></div>
+<p>三輪兇手段一致：<strong>是，processing</strong>。與 inputDelay 相差約 300~500 倍（兩個半數量級），
+與登記值（<code>phase1:189</code>、<code>src/specimens.ts:168</code> 的 <code>culprit: &#39;processing&#39;</code>）一致。</p>
+<p>broken 三輪 <code>loafPickedBy</code> 皆為 <code>forcedStyleAndLayout</code>
+（<code>records[mode=broken,run=1..3].loafPickedBy</code>），所以 <code>forcedFn = interleavedReadWrite</code>
+是有效的兇手證據 —— 挑幀準則正是「強制版面貢獻最大的那一幀」。</p>
+<blockquote>
+<p>⚠️ 治療臂的 <code>forcedFn</code> <strong>不構成證據</strong>。
+<code>records[mode=fixed-batched,run=1].forcedFn</code> 是 <code>batchedReadThenWrite</code>，
+但同筆 <code>loafPickedBy</code> 是 <code>specimenScriptDuration</code> —— 那一幀是「全部幀的強制版面貢獻皆為 0
+時退回 script 時長最大」的備援路徑挑出來的（<code>tools/reproducibility.mjs:440-442</code>：
+「不是前者時，forcedFn 與 specimenScript 只是『本輪最重的一幀』，不代表兇手」）。
+它證明的只是治療版有一幀較長的動畫幀（該幀 <code>specimenScript</code> 7.8ms、
+該輪 presentation 43.4ms），<strong>不是「有強制版面幀」</strong>。
+第 2、3 輪連備援幀都沒有：<code>forcedFn</code> 為 <code>null</code>、<code>loafPickedBy</code> 為 <code>none</code>。</p>
+<p>同筆的 <code>forcedPeak: 0</code> 也因此不是「無 entry 卻寫 0」：capture 邏輯在無逐點擊樣本時
+落回備援幀的 forced 值（<code>tools/reproducibility.mjs:438</code>），0 是那一幀實際量到的
+強制版面貢獻。後兩輪無幀可落回，所以是 <code>null</code>。三個值三種語意，不可混讀。</p>
+</blockquote>
+<blockquote>
+<p>⚠️ 另一 session 的對照（來源：模板已填範例引用的 0725 / 0726 上午資料）：
+0726 上午三輪治療臂都有強制版面幀（0.1 / 0.1 / 0.4ms，三輪 <code>forcedFn</code> 皆
+<code>batchedReadThenWrite</code>、<code>loafPickedBy</code> 皆 <code>forcedStyleAndLayout</code>）——
+那時它反而是<strong>正面證據</strong>：<code>keepNames</code> 讓治療版殘餘的那一幀也歸因到它自己，不是歸給外殼，
+正好回答 <code>phase1:203-206</code> 登記的風險 #3。本份 JSON 三輪零幀，這條證據線這輪不存在，
+但風險 #3 的另一半仍有答案：治療臂沒有卡在任何非零底線上，外殼沒有混進來。</p>
+</blockquote>
+<p><code>presentation</code> 繼承 <code>duration</code> 的 8ms 量化（duration 六筆全是 8 的倍數：
+1248 / 1760 / 1432 / 56 / 80 / 56）。對量級對照無影響，
+只在替兩個都已經很快的方案排名時咬人。<code>blockingDuration</code> 是整幀的值，含外殼，
+規格上無法拆到單一 script；<code>forcedStyleAndLayoutDuration</code> 是逐 script 的，
+所以只有它能乾淨濾掉外殼貢獻（<code>spec:1067</code> 說本標本「數字最可信」的理由）。</p>
+<h4>治療梯度</h4>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>治療</th>
+<th>forced median</th>
+<th>相對病變</th>
+<th>代價</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>讀寫分離（先全讀進 <code>Int32Array</code>，再全寫；<code>specimens/03-layout-thrashing.ts:180-200</code>）</td>
+<td>無 entry / 無 entry / 無 entry</td>
+<td><strong>不報比值</strong> —— 分母無 entry，除式無定義</td>
+<td>需要 mount 時預配的 800 格暫存（<code>:89</code>，點擊當下不配置，避免把配置與 GC 成本算進治療臂，陷阱 #12）；讀與寫不能再交錯寫在同一個迴圈裡</td>
+</tr>
+</tbody></table></div>
+<p>「716ms ÷ 0.1ms ＝ 7163 倍」這種算式描述的是除數多小，不是治療多有效；
+治療臂零 entry 時誠實的寫法就是「治療版沒有產生任何強制版面幀」。</p>
+<p>輔助指標（同一份 JSON 內部）：</p>
+<ul>
+<li><strong>INP</strong>：1016 → 48ms，<strong>21.2×</strong>（見實測節；48ms 高於 16ms 底線，可報）。</li>
+<li><strong>droppedFrames</strong>：broken 118 / 214 / 193，fixed 2 / 1 / 2
+（<code>records[*].custom.droppedFrames</code>）。治療臂落在雜訊底線 5 幀之內，<strong>不報比值</strong>。</li>
+<li><strong>自報單趟耗時 <code>lastPassMs</code></strong>（<code>records[*].custom.lastPassMs</code>）：
+broken 1208.3 / 880.9 / 1003.2ms，fixed 5.1 / 4.8 / 5.5ms。
+自報值、非判準指標，列出供對照，不做除法宣稱。</li>
+<li>治療臂殘餘的 presentation 43.4~69.0ms 對應 <code>phase1:260-263</code> 的探針發現：
+<strong>那一次必要的版面計算沒有消失</strong>，只是移出 script、還給瀏覽器的正常繪製步驟
+（<code>specimens/03-layout-thrashing.ts:170-173</code> 的誠實揭露註解）。
+省下來的是 799 次多餘結算，不是那一次必要的結算 —— 講成「讓版面計算消失」就是誇大。</li>
+</ul>
+<p><code>layoutChecksum</code> 兩臂皆 <strong>54888</strong>（<code>records[*].custom.layoutChecksum</code>，
+六筆全部相同）—— 讀寫分離<strong>沒有偷工</strong>，第 k 次點擊後的最終 DOM 完全相同
+（自我驗證機制見 <code>specimens/03-layout-thrashing.ts:210-229</code>）。
+這個檢核必須有：否則「治療版比較快」最無聊的解釋就是它少做了事。</p>
+<blockquote>
+<p>⚠️ 數字搬運警語（來源：模板已填範例）：checksum 曾被誤寫成 54168 ——
+那是 <code>phase1:258</code> 那支 <strong>1x、四次點擊</strong>校準探針的值。
+checksum 是最後一次點擊的高度總和，第 k 次讀到的高度取決於第 k−1 次寫入的相位，
+四次與十次必然落在不同相位，兩個數字本來就不該相同。
+本份 JSON 是十次點擊，六筆全部 54888。</p>
+</blockquote>
+<h4>與登記的差異</h4>
+<ul>
+<li><strong>符合</strong>（誤差 ≤ 30%）：<ul>
+<li>兇手段 processing，三輪一致（登記 <code>phase1:189</code>）✅</li>
+<li>broken forced 4x 帶 600<del>2000ms（<code>phase1:182</code>）：實測 828.85</del>964.45ms，帶內 ✅</li>
+<li>broken INP 4x 帶 700<del>2200ms（<code>phase1:183</code>）：每輪 median 892</del>1032ms
+（max 口徑 1248~1760ms）皆帶內 ✅</li>
+<li>fixed INP &lt; 100ms（<code>phase1:185</code>）：48ms ✅</li>
+<li>fixed forced &lt; 25ms（<code>phase1:184</code>）：以「零 entry」這個<strong>更強的形式</strong>成立 ✅</li>
+<li>比值 &gt; 20×（<code>phase1:187</code>，#3 判準現行有效，見「動工前登記的預期」節）：
+數值比值<strong>不可計算</strong>（分母無 entry），判準所主張的方向以治療臂歸零的形式成立。
+照模板規則不報數字。</li>
+</ul>
+</li>
+<li><strong>數值落空</strong>：無。1x 登記帶 200~500ms（<code>phase1:182</code>）本輪沒有 1x 臂，<strong>未檢核</strong>，
+不列入任何一欄 —— 沒量的東西沒有「符合」可言。</li>
+<li><strong>方向落空</strong>：無。</li>
+<li><strong>登記風險 #2（<code>phase1:199-201</code>）第二度成真</strong>：治療版不是數字小，是沒有數字。
+0725 動工探針第一次證實（<code>phase1:251-252</code>），本份 JSON 三輪再次全部零幀。
+「有取樣但零筆」與「沒量到」必須分開，否則會被判成「樣本不足」。</li>
+</ul>
+<p>量測過程中修掉的<strong>儀器</strong>缺陷（不是標本缺陷；教訓出自另一 session，標明來源）：</p>
+<blockquote>
+<p>⚠️ 來源：0725 session（模板已填範例「與登記的差異」節）。
+第一版拿 forced <strong>峰值</strong>跨輪比，算出離散度 52%，判定不可重現；
+改用每輪 median 之後是 9.2%。<strong>不可重現的是儀器。</strong>
+本份 JSON 自己也重演了這一課：<code>records[mode=broken,run=2]</code> 的 <code>forcedPeak</code> 1630.1ms
+是該輪 median 953.75 的 1.7 倍，被 median 吸收 —— 判定用 median 不用 max
+不是風格偏好，是這組資料反覆證明的規則。</p>
+</blockquote>
+<blockquote>
+<p>⚠️ 無來源數字警語（來源：<code>phase2:1234-1257</code> 的裁決）：0725 session 曾同時流傳兩組
+「每輪 median」——745 / 716 / 678（9.2%）與 721 / 709 / 751（5.9%）。
+逐項反推原始資料後，後者<strong>不是任何算式的結果，無來源，作廢</strong>（<code>phase2:1253</code>）。
+一組看起來很具體、還附了離散度的數字在檔案裡活了整輪都沒人問它從哪來 ——
+所以本報告每個數字都附欄位路徑或行號。</p>
+</blockquote>
+<h4>誠實揭露</h4>
+<ul>
+<li>這個標本<strong>沒有</strong>示範的東西：只示範了一種讀寫交錯樣式（讀 <code>offsetHeight</code> / 寫 <code>width</code>）。
+沒有涵蓋 <code>getComputedStyle</code>、<code>scrollTop</code>、<code>getBoundingClientRect</code> 等其他強制重排觸發點
+（標本頁自己列了不完整清單，<code>specimens/03-layout-thrashing.ts:335-348</code>）。
+也刻意不把 <code>ResizeObserver</code> / <code>IntersectionObserver</code> 做成第三個 mode ——
+那會同時換掉「什麼時候算」與「誰來算」兩個變因，對照就不乾淨了（<code>:174-178</code>）。</li>
+<li>已知會讓數字失真的因素：<ul>
+<li>N = 800 由校準錨點 B 反推（<code>phase1:159-172</code>），而錨點 B 機器相依性極高
+（同一份程式在不同 headless 設定下曾差 30 倍，<code>phase1:78</code>）。</li>
+<li><strong>跨 session 絕對值漂移約 2 倍</strong>（本報告病症警語列出的三個 session），
+可比較單位是同一份 JSON 內部的臂間比值，不是跨 JSON 的絕對毫秒數
+（<code>phase1:455-456</code>、<code>phase2:944-945</code>）。</li>
+<li>CPU 4x 是宣告值，本份 JSON 無 1x 臂，無法內部檢核（見凍結條件警語）。</li>
+<li><code>inp</code> 欄是 max 不是 p98（n = 10，<code>isMaxNotP98: true</code>）；判定一律用 <code>stats.median</code>。</li>
+<li>本標本的 LCP / CLS 欄<strong>不是判準指標</strong>：A 類 live 切換不重載 document，
+六筆 <code>lcp</code> 全是同一次首載的 184ms（裸 <code>p</code>）；<code>cls.sessionCount</code> 跨輪、
+<strong>跨 mode</strong> 累積（10 → 21 → 32 → 43 → 54 → 65），治療臂三筆 <code>cls.value</code>
+0.4252567150290073 與 broken run 2/3 逐位元相同，是同一份 document 的累積殘留，
+<strong>不得當成治療臂自己的 CLS 引用</strong>。</li>
+</ul>
+</li>
+<li>換機器後必須重跑什麼才能沿用結論：<strong>先重跑校準按鈕 B</strong>，重新校準單次強制版面的
+單位成本，再看 N = 800 的預期還成不成立（<code>phase1:78</code>、<code>specimens/03-layout-thrashing.ts:29-35</code>）。</li>
+<li>本輪未做的事：人手複驗（本輪全部 CDP 機器驅動）；<code>?validate=1</code> 的 web-vitals 對帳；
+1x 對照臂（節流檢核因此只能是宣告）；治療臂 LCP / CLS 的逐臂獨立量測
+（對 A 類結構上不存在，見上）。</li>
+</ul>
+
+<footer class="foot">
+  <p>每個數字在文中都附了 JSON 欄位路徑或登記檔行號 ——
+  原始資料在 <a href="https://github.com/BardKidd/FrontendMuseum">GitHub repo</a> 的
+  <code>docs/measurements/</code>，可自行覆算。臂間比值只在同一份 JSON 內部成立。</p>
+  <p><a href="/">← 標本索引</a> <a href="/reports/">報告目錄</a> <a href="/measure.html">量測台 →</a></p>
+</footer>
+</div>
+</body>
+</html>

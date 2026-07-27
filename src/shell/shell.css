@@ -186,6 +186,23 @@ body {
   color: var(--color-muted);
 }
 
+/* 站內／repo 連結。四道 gate：hover 只做顏色、點擊目標用 inline-flex + min-height 撐、
+   不加 padding-block（會把底線推離文字）、要單行的加 --nowrap 讓外層捲。 */
+.shell-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+.shell-link:hover { color: var(--color-focus); }
+.shell-link--nowrap { white-space: nowrap; }
+.shell-label__report {
+  margin: var(--space-2xs) 0 0;
+  overflow-x: auto;
+}
+
 /* ─────────── 標本索引 ─────────── */
 
 /* contain 只到 layout style，**不含 paint**：裡面有可聚焦的按鈕，

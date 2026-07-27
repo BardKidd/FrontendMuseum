@@ -507,9 +507,15 @@ export function App() {
         <p className="shell-mast__line">前端效能病理標本館</p>
         <h1 className="shell-mast__name">量測台</h1>
         <p className="shell-mast__meta">
+          {/* build 與 protocol 是誠實原則的宣告：換 build 數字不可比。
+              「npm run measure」那半句只對 clone repo 的人有意義，
+              對站上訪客是天書 —— dev-only 的作廢橫幅（shell-void）才是它該住的地方。 */}
           Phase 3 · build <span className="shell-mono">{__BUILD_ID__}</span> · protocol v
-          {PROTOCOL_VERSION} —— 量測一律走{' '}
-          <code className="shell-code">npm run measure</code>（build + preview）。
+          {PROTOCOL_VERSION} —— 數字受機器與負載影響，正式結論以{' '}
+          <a className="shell-link" href="https://github.com/BardKidd/FrontendMuseum">
+            原始資料（GitHub）
+          </a>{' '}
+          為準，可自行覆算。
         </p>
       </header>
       <hr className="shell-rule" />
@@ -541,6 +547,14 @@ export function App() {
       <section className="shell-label">
         <h2 className="shell-label__title">{meta.title}</h2>
         <p className="shell-label__sub">{meta.subtitle}</p>
+        {/* 校準件不是標本，沒有病理報告（它的角色是證明量測層沒說謊） */}
+        {!meta.id.startsWith('00') && (
+          <p className="shell-label__report">
+            <a className="shell-link shell-link--nowrap" href={`/reports/${meta.id}.html`}>
+              病理報告：為什麼會發生、治療翻了哪個變因 →
+            </a>
+          </p>
+        )}
 
         <h3 className="shell-h">
           切換（{meta.switchKind === 'live' ? '即時切換，不重載' : '重載整個 iframe'}）

@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>標本 #6 · 前端效能病理標本館</title>
+<style>
+  :root {
+    --paper:   oklch(97%   0.008 80);
+    --paper2:  oklch(94.5% 0.011 78);
+    --rule:    oklch(84%   0.010 70);
+    --rule2:   oklch(90%   0.008 74);
+    --neutral: oklch(58%   0.009 60);
+    --muted:   oklch(43%   0.009 55);
+    --ink:     oklch(21%   0.011 45);
+    --accent:  oklch(45%   0.145 28);
+    --focus:   oklch(52%   0.170 28);
+    --serif: ui-serif, "Noto Serif CJK TC", "Noto Serif TC", Georgia, serif;
+    --sans:  ui-sans-serif, system-ui, "Noto Sans CJK TC", sans-serif;
+    --mono:  ui-monospace, "Noto Sans Mono CJK TC", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); line-height: 1.75; font-size: 1rem;
+    -webkit-text-size-adjust: 100%;
+  }
+  .page { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+  .mast { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.05em;
+    color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem;
+    justify-content: space-between; }
+  .mast a { display: inline-flex; align-items: center; min-height: 44px;
+    color: var(--accent); white-space: nowrap; text-underline-offset: 0.2em; }
+  .mast a:hover { color: var(--focus); }
+  .rule  { border: 0; border-top: 3px solid var(--ink);  margin: 0.5rem 0 0; }
+  .rule2 { border: 0; border-top: 1px solid var(--rule); margin: 4px 0 2rem; }
+  h1 { font-family: var(--serif); font-size: 1.9rem; line-height: 1.3; margin: 0 0 1rem; }
+  h2 { font-family: var(--serif); font-size: 1.35rem; line-height: 1.35;
+    margin: 2.5rem 0 0.75rem; padding-top: 1rem; border-top: 1px solid var(--rule2); }
+  h3 { font-family: var(--serif); font-size: 1.1rem; margin: 2rem 0 0.5rem; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
+  p { margin: 0.75rem 0; }
+  a { color: var(--accent); }
+  a:hover { color: var(--focus); }
+  blockquote { margin: 1rem 0; padding: 0.25rem 1rem;
+    border-left: 3px solid var(--accent); background: var(--paper2);
+    color: var(--muted); }
+  blockquote p { margin: 0.5rem 0; }
+  code { font-family: var(--mono); font-size: 0.875em;
+    background: var(--paper2); padding: 0.1em 0.35em; border-radius: 3px;
+    overflow-wrap: anywhere; }
+  pre { background: var(--paper2); border: 1px solid var(--rule2);
+    padding: 0.75rem 1rem; overflow-x: auto; line-height: 1.6; }
+  pre code { background: none; padding: 0; overflow-wrap: normal; }
+  h1, h2, h3, h4, p, li { overflow-wrap: anywhere; min-width: 0; }
+  .rlist { list-style: none; padding: 0; }
+  .rlist li { overflow-x: auto; margin: 0; }
+  .rlist a { display: inline-flex; align-items: center; min-height: 44px;
+    white-space: nowrap; }
+  .tw { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; font-size: 0.9rem; min-width: 100%; }
+  th, td { text-align: left; padding: 0.45rem 0.75rem; vertical-align: top;
+    border-bottom: 1px solid var(--rule2); }
+  th { font-family: var(--mono); font-weight: 600; font-size: 0.8rem;
+    letter-spacing: 0.04em; color: var(--muted);
+    border-bottom: 2px solid var(--rule); white-space: nowrap; }
+  ul, ol { padding-left: 1.5rem; }
+  li { margin: 0.35rem 0; }
+  strong { font-weight: 650; }
+  .foot { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 0.8rem; color: var(--neutral); }
+  .foot a { white-space: nowrap; display: inline-flex; min-height: 44px;
+    align-items: center; margin-right: 1.25rem; }
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="mast" aria-label="站內">
+  <a href="/">← 標本索引</a>
+  <a href="/reports/">病理報告目錄</a>
+  <a href="/measure.html">量測台 →</a>
+</nav>
+<hr class="rule"><hr class="rule2">
+<h1>病理報告 · 標本 #6</h1>
+<blockquote>
+<p>依 <code>docs/pathology-report-template.md</code> 版型，八節全含，不刪節。</p>
+<p><strong>實測數字唯一來源</strong>：<code>docs/measurements/2026-07-26-reproducibility-4x-5.json</code>
+（2026-07-26 下午完整六標本掃描，66 筆，<code>isFullSweep: true</code>，<code>problems: []</code>，
+<code>consoleErrors: []</code>，<code>measuredAt 2026-07-26T05:52:29.671Z</code>）。
+欄位路徑一律寫成 <code>records[mode=…,run=…].欄位</code>，指的是該 JSON 內 <code>specimenId = 06-rerender-storm</code> 的那 12 筆。其他輪（同日上午 <code>-4x.json</code>、2026-07-25）的數字
+只以「另一 session」身分出現並逐一標明出處 —— 跨 session 絕對值不可比
+（<code>docs/phase2-expected-results.md:944-945</code>，下稱 <code>phase2</code>）。</p>
+<p><strong>判準狀態</strong>：<code>phase2:1259-1338</code> 檔尾追記已廢除 #6 的兩條比值判準
+（<code>≥ 6×</code>、<code>renderRatio &lt; 0.5</code>），新判準生效於下一輪起、<strong>對本份 JSON 不回溯</strong>
+（<code>phase2:1334-1338</code>）。所以本報告<strong>只報方向與絕對值，不寫「通過／未通過比值判準」</strong>；
+文中出現的倍率一律是描述性的，並各自附警語。</p>
+</blockquote>
+<hr>
+<h3>06 高頻資料流造成的 re-render 風暴</h3>
+<p><strong>病症一句話</strong>：按一次「開始推送」後靜置 5 秒，模擬資料流每 25ms 推一批 100 台裝置更新
+（共 1000 台）；病變版每收到一批就重建整張 1000 列清單，5 秒量測窗（60Hz，窗頂約 300 幀）
+內掉幀峰值 <strong>275~281 —— 幾乎每一幀都掉</strong>，有渲染的幀距 median 約 200ms（一秒五格畫面）；
+治療二（細粒度）同一窗內掉幀 <strong>14~18</strong>，幀距貼回 16.7ms 的 vsync 底線。</p>
+<blockquote>
+<p>⚠️ 這句話的絕對值只屬於本份 JSON（4x、CDP、2026-07-26 下午那一台機器的那一個小時）。
+治療臂未飽和，絕對值是<strong>機器速度的函數</strong>：同日上午另一 session 的細粒度臂是
+85 / 59 / 84（<code>phase2:1085-1090</code>），更早一輪還出現過 4~8
+（<code>specimens/06-rerender-storm.ts:19</code>，下稱 <code>ts</code>）。病變臂因飽和反而對機器不敏感
+（上午 281/284/277 → 本輪 281/277/275，<code>phase2:1087</code>）——
+<strong>於是兩臂的比值也是機器的函數</strong>（<code>phase2:1088-1090</code>），單獨引用這句話時必須連 session 一起引。</p>
+</blockquote>
+<h4>凍結條件</h4>
+<p>同一組條件之間才能比較。任何一項改動，先前所有數字作廢。</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CPU throttle</td>
+<td><strong>4x</strong> —— 宣告值（<code>sweep.cpuThrottle</code>、<code>cpuThrottlingRate: 4</code>）。驅動器有實套 CDP <code>Emulation.setCPUThrottlingRate</code>（<code>tools/reproducibility.mjs</code> <code>bootShell</code>），但 JS 偵測不到、本份 JSON 內部無 1x 臂可檢核，這一格只能是宣告</td>
+</tr>
+<tr>
+<td>驅動方式</td>
+<td>CDP 機器驅動（<code>sweep.driver</code>：<code>Input.dispatchMouseEvent</code>）。本標本整輪只有一次真實點擊，其後靜置</td>
+</tr>
+<tr>
+<td>viewport</td>
+<td>800 × 600（<code>FROZEN_VIEWPORT</code>，<code>src/specimens.ts:411</code>；CLS 與 LCP 都是 viewport 相對量）</td>
+</tr>
+<tr>
+<td>refreshHz</td>
+<td><strong>60</strong>（<code>records[*].refreshHz</code>，12 筆皆 60）。掉幀門檻與一幀預算由實測值推導（<code>ts:173-179</code> <code>targetFrameMs</code>），不寫死 16.7ms</td>
+</tr>
+<tr>
+<td>操作程序</td>
+<td>click × 1（「開始推送」）→ 靜置，串流 <strong>5000ms 自動停止</strong>（<code>action: &#39;stream&#39;</code>、<code>repetitions: 1</code>、<code>intervalMs: null</code>，<code>src/specimens.ts:403-409</code>；<code>STREAM_DURATION_MS</code>，<code>ts:159</code>）。串流長度＝掉幀滾動窗（<code>droppedFrameWindowMs: 5000</code>，<code>src/protocol.ts:51</code>）⇒ 窗頂 ≈ 300 幀</td>
+</tr>
+<tr>
+<td>負載參數（凍結）</td>
+<td><code>DEVICE_COUNT</code> 1000（<code>ts:99</code>）、<code>PUSH_INTERVAL_MS</code> 25（<code>ts:129</code>）、<code>BATCH_SIZE</code> 100（<code>ts:132</code>）。12 筆 records 的 <code>custom.deviceCount / pushIntervalMs / batchSize</code> 逐筆回報同值</td>
+</tr>
+<tr>
+<td>buildId</td>
+<td><code>0.1.0-ms191c71</code>（<code>records[*].buildId</code>，12 筆同）</td>
+</tr>
+<tr>
+<td>protocolVersion</td>
+<td>1（<code>src/protocol.ts:8</code> 的常數）。⚠️ 本份 JSON 的 records <strong>沒有這個欄位</strong>（全檔 grep 零筆），此格取自程式碼，不是量測實錄</td>
+</tr>
+<tr>
+<td>dispatchSpanMs / Nominal</td>
+<td><code>null</code> × 12 —— 本標本不走絕對排程（單次點擊，無節拍器），<strong>是「不適用」不是 0</strong></td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p>⚠️ 量測窗的登記值與程式<strong>從未對齊</strong>：<code>phase2:138</code> 登記「10 秒」，程式從頭就是 5000ms。
+裁決紀錄已追記現行有效值 5000ms（<code>phase2:1104-1114</code>），但同段也判定：
+<code>ts:156-158</code> 的註解宣稱「登記值已在該檔修正紀錄更正」在寫下當時<strong>是不存在的事實</strong>
+（依規矩 4 屬缺陷等級）—— 該更正是裁決紀錄事後補上的。本報告依現行有效值 5000ms。</p>
+</blockquote>
+<blockquote>
+<p>資料讀取註記：本標本 12 筆的 <code>runId</code> 是 run-2~run-16、缺 run-1/5/9/13。
+依驅動器流程（換標本與每輪結尾的「重跑」各會推進 run context，capture 在點「重跑」之前、
+以 <code>runIdBefore</code> 對回 history —— <code>tools/reproducibility.mjs:651-655</code>），缺號是簿記不是丟樣本；
+此為推斷，已列入待複核。</p>
+</blockquote>
+<h4>動工前登記的預期</h4>
+<blockquote>
+<p>登記出處（分層，後者修正前者、原文皆未動）：
+原始登記 <code>phase2:126-176</code>（200 台 / 50ms）→ 校準 <code>phase2:361-377</code>（1000 台）→
+重新設計 <code>phase2:741-825</code>（25ms / 批 100、樹狀梯度、補充判定欄；
+「本次所有新登記預期值都是推導值，還沒量過一次」<code>phase2:823-825</code>）→
+檔尾追記 <code>phase2:1285-1300, 1319-1332</code>（判準重立，生效於下一輪，不回溯本 JSON）。
+<strong>這一節不准回頭改去迎合實測。</strong></p>
+</blockquote>
+<ul>
+<li>主指標：登記檔 <code>phase2:153</code> 寫的是 <code>custom.droppedFrames</code>（5 秒窗）；<strong>現行主指標是
+<code>custom.droppedFramesPeak</code></strong>（<code>src/specimens.ts:394</code>）。⚠️ 這條欄位漂移與 #4 的同型漂移
+（<code>phase2:1109</code>）是同一件事，但裁決紀錄「登記值沒跟上程式」表<strong>只記了 #4，沒記 #6</strong> ——
+兩者不是同一個量（峰值 vs 快照當下的窗值，<code>phase2:1117</code>）。本報告照現行欄位取數，並回報此缺漏。</li>
+<li>預期帶（原始登記，4x）：<code>broken</code> 150<del>290（<code>phase2:153</code>）、<code>fixed-batch</code> 20</del>120（<code>phase2:156</code>）、
+<code>fixed-granular</code> &lt; 30（<code>phase2:157</code>）、<code>fixed-backpressure</code> &lt; 15（<code>phase2:158</code>）。
+⚠️ 後三帶推導自 200 台 / 50ms 的舊設計與<strong>鏈狀</strong>梯度，兩次校準後從未按新參數重推。</li>
+<li>兇手宣告：<strong>loaf</strong>（<code>phase2:161</code>）。無 INP 樣本（沒有使用者互動，<code>ts:37-38</code>）。</li>
+<li>比值預期：<code>broken / fixed-granular ≥ 6×</code>（<code>phase2:163</code>）——<strong>已作廢</strong>（<code>phase2:1285-1300</code>，
+廢因：分子飽和不動、分母隨機器漂，固定比值判的是機器不是標本）；
+<code>renderRatio(fixed-backpressure) &lt; 0.5</code>（<code>phase2:159</code>）——<strong>已作廢</strong>（<code>phase2:1319-1332</code>）。
+取而代之的兩個絕對錨（<code>broken ≥ 240</code>、<code>fixed-granular ≤ 150</code>，皆由解析式
+<code>dropped ≈ 300 − 5000/幀距</code> <code>ts:94</code> 反推）與方向性 renderRatio 判準
+<strong>自下一輪生效，本報告不用它們宣稱通過與否</strong>。</li>
+<li>補充判定欄（重設計登記在案）：<code>renderFrameGapMedianMs</code>（只取「這一幀有渲染」的幀距）
+取代已作廢的「渲染耗時」備援（<code>phase2:782, 815</code>）；
+<code>broken</code> 對 <code>fixed-batch</code> 這一對的判定<strong>改用它</strong>，因為主指標在這一對上飽和（<code>ts:93-97</code>）。</li>
+<li>可證偽判準（登記在案）：本輪若量到 <code>fixed-granular</code> 的 <code>rendersSkipped &gt; 0</code>，
+「背壓不接在細粒度之後」的實證前提就倒，樹狀梯度正當性整段重寫（<code>ts:34-35</code>）。</li>
+<li>登記在案的風險（<code>phase2:165-175</code>）：<ol>
+<li><code>droppedFrames</code> 有上限（窗頂 ~300），病變類臂會飽和、彼此分不出高下；</li>
+<li>背壓丟中間狀態＝畫面某些瞬間不是最新值，是真實取捨，「丟棄數」必須上報；</li>
+<li><code>setInterval</code> 卡頓後累積補償回呼 —— <strong>此條方向記反</strong>（<code>phase2:417-429</code>：漏拍被丟棄、
+不是排隊補發，推送率會反向塌陷），重設計後改為照時鐘補發（<code>ts:319-366</code>）。</li>
+</ol>
+</li>
+</ul>
+<h4>實測</h4>
+<p>三輪，同一組凍結條件。<strong>離散度算在每輪的值上、判定不用 max</strong>
+（<code>src/protocol.ts:309</code>「抗離群。可重現性判定用這個，不用 max」——
+模板引作 <code>:290</code>，行號已漂）。相對離散度 = (max − min) ÷ median-of-three。</p>
+<p>主指標 <code>custom.droppedFramesPeak</code>（每輪一值，<code>records[mode=…,run=1..3].custom.droppedFramesPeak</code>）：</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>mode</th>
+<th>三輪主指標</th>
+<th>相對離散度</th>
+<th>絕對全距</th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>broken 每批重建整表</td>
+<td>281 / 277 / 275</td>
+<td>2.2%（6÷277）</td>
+<td>6 幀</td>
+<td>✅ 可重現（飽和臂，貼窗頂）</td>
+</tr>
+<tr>
+<td>fixed-batch 批次化 + rAF</td>
+<td>234 / 238 / 232</td>
+<td>2.6%（6÷234）</td>
+<td>6 幀</td>
+<td>✅ 可重現（同樣貼近窗頂）</td>
+</tr>
+<tr>
+<td>fixed-granular 只改變動節點</td>
+<td>14 / 18 / 18</td>
+<td>22.2%（4÷18）</td>
+<td><strong>4 幀 ≤ 底線 5 幀</strong></td>
+<td>✅ 可重現（兩判準皆過）</td>
+</tr>
+<tr>
+<td>fixed-backpressure 背壓降頻</td>
+<td>137 / 135 / 136</td>
+<td>1.5%（2÷136）</td>
+<td>2 幀</td>
+<td>✅ 可重現</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p>⚠️ 同日上午另一 session 的 <code>fixed-granular</code> 是 85 / 59 / 84、31.0% 擦線判 unstable
+（<code>phase2:932</code>）。本輪 14 / 18 / 18 通過，靠的是絕對全距落在 5 幀底線內 ——
+未飽和治療臂的<strong>絕對值</strong>跨 session 漂了 4~6 倍而工作量一格沒動（<code>phase2:1085-1088</code>），
+可重現的是「本輪之內」，不是那個數字本身。</p>
+</blockquote>
+<p>補充判定欄 <code>custom.renderFrameGapMedianMs</code>（每輪 median，直接引用不重算）：</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>mode</th>
+<th>三輪（ms）</th>
+<th>相對離散度</th>
+<th>備註</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>broken</td>
+<td>200.1 / 208.3 / 200.0</td>
+<td>4.1%（8.3÷200.1）</td>
+<td>一格畫面約 12 個 vsync</td>
+</tr>
+<tr>
+<td>fixed-batch</td>
+<td>100.1 / 116.6 / 116.6</td>
+<td>14.2%（16.5÷116.6）</td>
+<td>全距恰為一個刷新週期 —— 幀距落在 vsync 網格上，這是量化不是抖動</td>
+</tr>
+<tr>
+<td>fixed-granular</td>
+<td>16.7 / 16.7 / 16.7</td>
+<td>0.0%</td>
+<td>貼死 vsync 底線</td>
+</tr>
+<tr>
+<td>fixed-backpressure</td>
+<td>100.0 / 100.0 / 100.0</td>
+<td>0.0%</td>
+<td>有渲染的幀仍是整表重建的幀</td>
+</tr>
+</tbody></table></div>
+<p>計數器（逐輪，<code>records[mode=…,run=1..3].custom.*</code>）：</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>mode</th>
+<th>batchesReceived</th>
+<th>batchesRendered</th>
+<th>rendersSkipped</th>
+<th>renderRatio</th>
+<th>updatesApplied</th>
+<th>catchupClamped</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>broken</td>
+<td>201 / 202 / 201</td>
+<td>201 / 202 / 201</td>
+<td>0 / 0 / 0</td>
+<td>1.0 × 3</td>
+<td>19136 / 19234 / 19136</td>
+<td>0 × 3</td>
+</tr>
+<tr>
+<td>fixed-batch</td>
+<td>206 / 201 / 203</td>
+<td>42 / 41 / 42</td>
+<td>0 / 0 / 0</td>
+<td>0.21 × 3</td>
+<td>15707 / 15374 / 16009</td>
+<td>0 × 3</td>
+</tr>
+<tr>
+<td>fixed-granular</td>
+<td>200 / 200 / 200</td>
+<td>191 / 185 / 187</td>
+<td><strong>0 / 0 / 0</strong></td>
+<td>0.96 / 0.93 / 0.94</td>
+<td>18876 / 18813 / 18840</td>
+<td>0 × 3</td>
+</tr>
+<tr>
+<td>fixed-backpressure</td>
+<td>201 / 204 / 204</td>
+<td>26 / 26 / 26</td>
+<td><strong>137 / 144 / 142</strong></td>
+<td>0.13 × 3</td>
+<td>13618 / 13720 / 13753</td>
+<td>0 × 3</td>
+</tr>
+</tbody></table></div>
+<p>三件事這張表直接證明：</p>
+<ol>
+<li><strong>推送率被凍住了。</strong> 名目 5000 ÷ 25 = 200 批，四臂實收 200~206 ——
+照時鐘補發修掉了舊實作的塌陷（舊：病變臂五秒只收到 48 批，<code>phase2:422-423</code>）。
+<code>catchupClamped</code> 12 筆全 0：無任何一輪觸發「補發被砍即作廢」條款（<code>ts:140-147</code>）。</li>
+<li><strong>背壓那段程式碼活著。</strong> <code>rendersSkipped</code> 137 / 144 / 142（前兩輪設計下三輪恆 0、
+被判死程式碼，<code>phase2:483-493</code>；重設計後上午 session 已量到 140 / 143 / 142，
+<code>phase2:922-924</code>，本輪再現）。</li>
+<li><strong>可證偽判準未倒。</strong> <code>fixed-granular</code> 的 <code>rendersSkipped</code> 三輪皆 0（<code>ts:34-35</code> 登記：
+若 &gt; 0 樹狀梯度理由重寫）—— 本輪不需要重寫。</li>
+</ol>
+<h4>兇手歸因</h4>
+<p>登記的兇手是 <strong>loaf</strong>（<code>phase2:161</code>），不是 INP 段 —— 本標本整輪只有「開始推送」那一下點擊
+（<code>totalInteractions</code> 12 筆皆 1，<code>stats.n</code> 皆 1，<code>isMaxNotP98: true</code>），
+INP 16~24ms 落在 16ms 底線與 8ms 量化網格上，<strong>四臂等價、不做任何臂間排名</strong>。
+下表照模板填，INP 三段只為完整性列出：</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>broken</th>
+<th>fixed-batch</th>
+<th>fixed-granular</th>
+<th>fixed-backpressure</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>inp（單次點擊，n=1）</td>
+<td>24 / 24 / 16 ms</td>
+<td>16 / 24 / 24 ms</td>
+<td>24 / 16 / 16 ms</td>
+<td>24 / 24 / 24 ms</td>
+</tr>
+<tr>
+<td>inputDelay</td>
+<td>1.2 ~ 2.0 ms</td>
+<td>0.9 ~ 2.0 ms</td>
+<td>1.2 ~ 1.8 ms</td>
+<td>1.9 ~ 2.1 ms</td>
+</tr>
+<tr>
+<td>processing</td>
+<td>2.5 ~ 3.9 ms</td>
+<td>1.7 ~ 9.2 ms</td>
+<td>3.1 ~ 9.6 ms</td>
+<td>1.7 ~ 3.5 ms</td>
+</tr>
+<tr>
+<td>presentation</td>
+<td>11.2 ~ 20.2 ms</td>
+<td>11.7 ~ 21.4 ms</td>
+<td>11.0 ~ 13.2 ms</td>
+<td>18.5 ~ 20.2 ms</td>
+</tr>
+<tr>
+<td>LoAF forcedStyleAndLayout</td>
+<td><strong>無 entry</strong>（<code>forcedSamples: []</code>、<code>forcedMedian: null</code> × 3）</td>
+<td>同左</td>
+<td>同左</td>
+<td>同左</td>
+</tr>
+<tr>
+<td>loafPickedBy</td>
+<td><code>specimenScriptDuration</code> × 3</td>
+<td>同左</td>
+<td>同左</td>
+<td>同左</td>
+</tr>
+<tr>
+<td>specimenScript（備援選出的幀）</td>
+<td><strong>141.3 / 143.5 / 141.8 ms</strong></td>
+<td>40.2 / 22.6 / 19.4 ms</td>
+<td>16.8 / 21.1 / 20.0 ms</td>
+<td>35.1 / 20.3 / 17.0 ms</td>
+</tr>
+<tr>
+<td>sourceFunctionName（forcedFn 欄）</td>
+<td><code>pushDeviceBatch</code> × 3</td>
+<td><code>onAnimationFrame</code> × 3</td>
+<td>空字串 × 3</td>
+<td>空字串 × 3</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p>⚠️ 12 筆的 <code>loafPickedBy</code> 全是 <code>specimenScriptDuration</code> —— 那些幀是<strong>備援路徑</strong>選出來的，
+<code>forcedFn</code> 欄<strong>不構成「有強制版面幀」的證據</strong>（模板已填範例的同一條警語；
+<code>forcedMedian: null</code> 是「無 entry」，不是量到 0）。這個標本本來就不該有強制版面：
+它的病是重建太頻繁，不是讀寫交錯。<code>forcedPeak</code> 一欄 records 實錄為 0。</p>
+</blockquote>
+<p>真正的歸因鏈是掉幀與幀距，而且有解析式可對帳：標本內建
+<code>dropped ≈ 300 − 5000/幀距</code>（<code>ts:94</code>）。代入本輪 broken 的幀距 median 200.1ms
+⇒ 300 − 25 ≈ <strong>275</strong>，與三輪實測峰值 275<del>281 相符 —— 主指標與幀距兩個獨立量測互相咬合。
+LoAF 側的佐證方向一致：broken 被選出的幀 141</del>143ms、三輪皆歸因到 <code>pushDeviceBatch</code>
+（<code>keepNames</code> 生效，補發迴圈裡的連續重建正是該函式做的事），
+治療臂全部落在 17~40ms。</p>
+<p>三輪兇手一致性：broken 的 <code>forcedFn</code> / <code>loafPickedBy</code> / <code>specimenScript</code> 三輪一致 ✅ ——
+但「一致的是備援幀的歸因」，宣稱強度止於此。
+登記的 <code>loaf.blockingDuration</code> 帶（100~400ms，<code>phase2:155</code>）在本份 records <strong>無此欄位，未入帳</strong>，不評。</p>
+<blockquote>
+<p><code>presentation</code> 繼承 <code>duration</code> 的 8ms 量化，會落在 8ms 網格上。
+對量級對照無影響，只在替兩個都已經很快的方案排名時咬人。
+<code>blockingDuration</code> 是整幀的值，<strong>含外殼</strong>，規格上無法拆到單一 script；
+<code>forcedStyleAndLayoutDuration</code> 是逐 script 的，所以只有它能乾淨濾掉外殼貢獻。</p>
+</blockquote>
+<h4>治療梯度</h4>
+<p><strong>梯度是樹狀不是鏈狀</strong>（<code>phase2:784-793</code>、<code>src/specimens.ts:381-391</code>）：
+治療二與治療二乙都接在治療一之後、互為<strong>兄弟</strong>，各自相對父臂只翻一個變因。
+背壓臂不是「治療三」—— 叫治療三會讓讀者以為它疊在細粒度之上。</p>
+<pre><code>broken ──► 治療一 fixed-batch ──┬──► 治療二   fixed-granular    （翻：每一次渲染的成本）
+                                └──► 治療二乙 fixed-backpressure（翻：渲染的次數）
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>治療</th>
+<th>父臂（翻的變因）</th>
+<th>主指標（峰值，三輪）</th>
+<th>相對父臂的方向</th>
+<th>代價</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>治療一 · 批次化 + rAF</td>
+<td>broken（渲染的時機）</td>
+<td>234 / 238 / 232</td>
+<td><strong>主指標飽和，這一對表達不了差異</strong>（275<del>281 vs 232</del>238，兩臂都貼窗頂）；補充欄有差：幀距 200.1 → 116.6ms（median-of-three，描述性約 1.7×，不作判準宣稱）</td>
+<td>更新最多晚一幀上畫，而此臂一幀是 100~117ms；仍整表重建，掉幀仍飽和</td>
+</tr>
+<tr>
+<td>治療二 · 細粒度</td>
+<td>fixed-batch（每次渲染的成本）</td>
+<td>14 / 18 / 18</td>
+<td>峰值 234<del>238 → 14</del>18，幀距 116.6 → 16.7ms 貼 vsync；最後一次渲染的 JS 自報 0.7<del>1.6ms（<code>custom.renderScriptMs</code>，快照值、只含 JS）對照父臂 15.2</del>16.8ms</td>
+<td>必須維護每列節點參照；整表重建過後參照全部失效，寫舊參照是「畫面不動、程式不報錯」的安靜失敗（<code>ts:481-483, 826-829</code>）</td>
+</tr>
+<tr>
+<td>治療二乙 · 背壓降頻</td>
+<td>fixed-batch（渲染的次數）</td>
+<td>137 / 135 / 136</td>
+<td>渲染次數 41<del>42 → 26，峰值 232</del>238 → 135~137；<code>renderRatio</code> 0.21 → 0.13（方向與下一輪生效的新判準同向，此處不宣稱通過）</td>
+<td><strong>畫面在被跳過的幀顯示的不是最新值</strong>：<code>rendersSkipped</code> 137 / 144 / 142 逐輪上報（登記風險 #2 的實價）；仍整表重建，有渲染的幀仍是 100ms</td>
+</tr>
+</tbody></table></div>
+<p>治療臂與底線的關係：<code>fixed-granular</code> 的峰值全距（4 幀）落在 5 幀雜訊底線<strong>內</strong>、
+但三輪值 14~18 本身在底線之上 —— 依模板規則它不屬「落進底線不報比值」的情形；
+真正禁止報比值判準的理由是檔尾追記的不回溯條款。描述性倍率照 <code>phase2:1089</code> 的先例
+給一次、連警語一起給：<strong>broken/granular = 277 ÷ 18 ≈ 15.4×，這個倍率是機器速度的函數</strong>
+（同日上午同一算式得 3.3×，<code>phase2:1088-1089</code>），跨 session 引用它是無效的。</p>
+<p>三個必須寫明的結構事實：</p>
+<ul>
+<li><strong>樹狀的形狀被實測支持</strong>：背壓臂（135<del>137）<strong>差於</strong>細粒度臂（14</del>18）、兩者皆優於父臂 ——
+背壓仍在整表重建、只是建得少。若它是「治療二再加一點」，這個結果無法解釋
+（同一論證見 <code>phase2:928-930</code>，另一 session 同方向）。</li>
+<li><strong><code>renderRatio</code> 對 granular 不判別</strong>：0.93~0.96 高於父臂的 0.21，但那不是「批得比較差」——
+它的幀便宜，渲染得起更頻繁。此欄只在<strong>渲染路徑相同</strong>的兩臂間可比（<code>ts:543-544</code>），
+即 <code>fixed-batch</code> 對 <code>fixed-backpressure</code> 這一對。</li>
+<li><strong>背壓的代價有兩本帳</strong>：<code>rendersSkipped</code>（137~144 次渲染機會被丟棄），以及
+<code>allFrameGapMedianMs</code> 16.7 對 <code>renderFrameGapMedianMs</code> 100 的落差 ——
+畫面每 16.7ms 都在刷新，但大多數幀刷的不是最新資料（<code>ts:650-653</code>：
+代價正好藏在兩組樣本的差裡）。這是取捨，不是免費的勝利。</li>
+</ul>
+<p>無效或反向的治療：本輪無。前兩輪的「治療一 1.04× 零效果」（<code>phase2:497-504</code>）
+是舊參數未進作用區間，重設計後翻案 —— 見下一節。</p>
+<h4>與登記的差異</h4>
+<ul>
+<li><strong>符合</strong>（誤差 ≤ 30%）：<ul>
+<li><code>broken</code> 281 / 277 / 275 落在原始登記 4x 帶 150~290（<code>phase2:153</code>；1000 台校準後沿用，
+<code>phase2:372-373</code>）內、貼上緣。</li>
+<li><code>fixed-granular</code> 14 / 18 / 18 &lt; 30（<code>phase2:157</code> 的 4x 帶）。</li>
+<li>登記風險 #1（飽和）成真且<strong>按登記的備援機制解決</strong>：主指標在 <code>broken</code> 對 <code>fixed-batch</code>
+上分不出高下（<code>phase2:167-170</code>、<code>ts:93-97</code> 皆預測），<code>renderFrameGapMedianMs</code>
+照重設計登記（<code>phase2:782, 815</code>）接手了那一對的判定。</li>
+<li>登記風險 #2（背壓丟最新值）成真且代價欄照登記上報（<code>rendersSkipped</code>，<code>phase2:171-172</code>）。</li>
+<li>重設計的併批推導與實測相容：推導 96 ÷ 25 = 3.84 批/幀（<code>phase2:763</code>、<code>ts:117</code>），
+實測 <code>batchesReceived ÷ batchesRendered</code> = 4.83<del>4.90，而實際渲染幀距 100</del>116.7ms
+（比推導用的 96ms 長一點，併得就多一點）—— 同量級、同機制。</li>
+<li>背壓守衛從死程式碼翻案為活的（<code>rendersSkipped</code> 0 → 137~144；
+死碼判定在 <code>phase2:483-493</code>，翻案首見 <code>phase2:922-925</code>，本輪再現）。</li>
+<li>granular 的 <code>rendersSkipped</code> 三輪恆 0 —— 登記的可證偽判準（<code>ts:34-35</code>）未觸發，
+樹狀梯度的實證前提本輪成立。</li>
+</ul>
+</li>
+<li><strong>數值落空</strong>（同方向但差距大）：<ul>
+<li><code>fixed-batch</code> 232<del>238 對登記帶 20</del>120（<code>phase2:156</code>）—— 超上限約 2×。
+該帶推導自 200 台 / 50ms 的舊設計；1000 台之下「任何仍整表重建的臂都會飽和」
+是<strong>同一份登記體系裡更晚、更明確的預測</strong>（<code>ts:93-94</code>），且與 20~120 帶互相矛盾 ——
+落空的是從未按新參數重推的舊帶，不是標本。依處置順序，不動 protocol，
+判定改走登記在案的補充欄。</li>
+<li><code>fixed-backpressure</code> 135~137 對登記帶 &lt; 15（<code>phase2:158</code>）—— 差約 9×。
+登記時它是<strong>鏈狀</strong>「治療三」、接在細粒度之後（<code>phase2:147</code>），&lt; 15 的前提是承接
+細粒度的便宜渲染；樹狀重排（<code>phase2:784-793</code>）後它接在 <code>fixed-batch</code> 之下、仍整表重建，
+前提已不存在。方向（優於父臂、優於病變）成立。</li>
+</ul>
+</li>
+<li><strong>方向落空</strong>：本輪無。歷史上的兩次方向落空都已入檔並在重設計後解決：
+風險 #3 的 <code>setInterval</code> 補償方向記反（<code>phase2:417-429</code>），
+背壓守衛不可達（<code>phase2:483-493</code>）。</li>
+<li><strong>判準不評</strong>：<code>≥ 6×</code>（<code>phase2:163</code>）與 <code>renderRatio &lt; 0.5</code>（<code>phase2:159</code>）已作廢；
+接替的絕對錨 240 / 150 與方向性 renderRatio（<code>phase2:1285-1300, 1319-1332</code>）
+生效於下一輪，<strong>本報告依不回溯條款（<code>phase2:1334-1338</code>）不宣稱通過與否</strong>。
+留給下一輪對照的本輪落點（純描述）：broken 275<del>281、granular 14</del>18、
+<code>renderRatio</code> 0.13（backpressure）對 0.21（batch）。</li>
+</ul>
+<p>處置順序固定：① 查環境 ② 換更精確的驅動方式 ③ <strong>最後</strong>才動 protocol。
+本輪 <code>sweep.problems</code> 為空、<code>catchupClamped</code> 全 0、節拍欄不適用（無節拍器），①②無事可查。</p>
+<h4>誠實揭露</h4>
+<ul>
+<li><strong>這個標本沒有示範的東西</strong>：<ul>
+<li>真 WebSocket。資料流是 <code>setInterval</code> 模擬（<code>ts:40-44</code>），刻意排除網路抖動 ——
+換到的是決定性（固定種子 <code>DATASET_SEED</code>，<code>ts:170, 602-607</code>），犧牲的是真實感。</li>
+<li>「re-render」是字面的整表 DOM 重建，<strong>不含任何框架的 reconciliation / diff 成本</strong>。
+機制對應框架風暴，但數字不含框架開銷。</li>
+<li>病變的完整成本。補發是同步 <code>for</code> 迴圈、七次重建共用一次排版（登記在案的建模選擇，
+<code>ts:337-351</code>、<code>phase2:804-809</code>）：量到的差距只含白做的節點建構、不含白做的排版，
+<strong>是病變的下界，偏差方向對治療保守</strong>。「同步補發 vs 逐 task 補發」的對照臂未開。</li>
+<li>「背壓不可能在細粒度上觸發」——不宣稱。「一幀改 1000 個文字節點的真實幀成本」
+從未量過（<code>ts:31-32</code>），宣稱的只有「觀測到的負載下沒有觸發」。</li>
+</ul>
+</li>
+<li><strong>已知會讓數字失真的因素</strong>：<ul>
+<li><code>renderScriptMs</code> 只含 JS，抓不到 style / layout / paint —— 上一輪反推系統性低估
+真實幀成本約 7.5×（<code>ts:28-30, 223</code>）。本報告不拿它做任何判定，僅作快照描述。</li>
+<li>主指標有天花板（窗頂 ≈ 300 幀）：飽和臂之間分不出高下，飽和臂與未飽和臂的比值
+是機器速度的函數（<code>phase2:1085-1090</code>）。</li>
+<li><code>loafPickedBy</code> 全為備援路徑：LoAF 側證據是「最重 specimen script 的幀」，
+不是強制版面幀（本標本本就無強制版面）。</li>
+<li><code>lcp</code>（248ms，裸 <code>p</code>）與 <code>cls</code>（0.018868…）12 筆逐位元相同 —— A 類單一 document
+的載入期值，<strong>不描述臂間差異</strong>，本標本主指標也不在載入期。</li>
+<li>⚠️ 新觀察（兩份 phase 檔皆未記）：<code>cls.sessionCount</code> 沿 12 筆單調爬升
+1 → 23（<code>records[*].cls.sessionCount</code>），即<strong>串流期間持續有新的 layout-shift
+session window 產生</strong>（來源未查；<code>clsIgnoredByInput</code> 皆 0），只是沒有任何一個窗
+超過載入窗的 0.0189。不影響本標本判定，已列入回報待查。</li>
+<li>量測儀器自身的開銷是對稱設計：狀態列用 250ms 時鐘限流（<code>ts:161-168</code>）、
+取樣 rAF 迴圈四臂同跑（<code>ts:369-375</code>）—— 對稱，但不是零。</li>
+</ul>
+</li>
+<li><strong>換機器後必須重跑什麼才能沿用結論</strong>：<ul>
+<li><code>FULL_REBUILD_FRAME_MS = 96</code> 是上一輪的機器常數（<code>ts:105</code>），換機器要按 <code>ts:65-69</code>
+的反推式重量，<code>PUSH_INTERVAL_MS</code> 的上下界推導（<code>ts:112-129</code>，下界是相變點不是安全邊際）
+隨之重推。</li>
+<li>5 幀雜訊底線也是量出來的機器值（<code>ts:85-87</code>）。</li>
+<li>護欄自帶：任何一輪 <code>catchupClamped &gt; 0</code> 即作廢、間隔提到 32ms 重跑（<code>ts:140-147</code>）；
+機器快到整表重建塞得進一幀時，背壓臂依設計無事可做（<code>phase2:1329-1331</code>），
+那是「不適用」不是失敗。</li>
+</ul>
+</li>
+<li><strong>本輪未做的事</strong>：人手複驗（全 CDP 驅動）；web-vitals 對帳；1x 對照臂
+（故 4x 是否真的套上無法由資料內部檢核）；治療臂「最終畫面與病變臂等價」的檢核 ——
+本標本沒有 #3 <code>layoutChecksum</code> 式的硬檢核，等價性由固定種子的決定性保證，
+是推論不是實測（且背壓臂<strong>刻意</strong>不等價，那正是它的代價）；
+逐臂 LCP 標的記錄（此處 12 筆同元素，無 #5 的跨臂問題，但欄位解析度同樣只有裸 tag）。</li>
+</ul>
+
+<footer class="foot">
+  <p>每個數字在文中都附了 JSON 欄位路徑或登記檔行號 ——
+  原始資料在 <a href="https://github.com/BardKidd/FrontendMuseum">GitHub repo</a> 的
+  <code>docs/measurements/</code>，可自行覆算。臂間比值只在同一份 JSON 內部成立。</p>
+  <p><a href="/">← 標本索引</a> <a href="/reports/">報告目錄</a> <a href="/measure.html">量測台 →</a></p>
+</footer>
+</div>
+</body>
+</html>

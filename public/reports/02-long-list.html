@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>02 長列表未虛擬化 · 前端效能病理標本館</title>
+<style>
+  :root {
+    --paper:   oklch(97%   0.008 80);
+    --paper2:  oklch(94.5% 0.011 78);
+    --rule:    oklch(84%   0.010 70);
+    --rule2:   oklch(90%   0.008 74);
+    --neutral: oklch(58%   0.009 60);
+    --muted:   oklch(43%   0.009 55);
+    --ink:     oklch(21%   0.011 45);
+    --accent:  oklch(45%   0.145 28);
+    --focus:   oklch(52%   0.170 28);
+    --serif: ui-serif, "Noto Serif CJK TC", "Noto Serif TC", Georgia, serif;
+    --sans:  ui-sans-serif, system-ui, "Noto Sans CJK TC", sans-serif;
+    --mono:  ui-monospace, "Noto Sans Mono CJK TC", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); line-height: 1.75; font-size: 1rem;
+    -webkit-text-size-adjust: 100%;
+  }
+  .page { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+  .mast { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.05em;
+    color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem;
+    justify-content: space-between; }
+  .mast a { display: inline-flex; align-items: center; min-height: 44px;
+    color: var(--accent); white-space: nowrap; text-underline-offset: 0.2em; }
+  .mast a:hover { color: var(--focus); }
+  .rule  { border: 0; border-top: 3px solid var(--ink);  margin: 0.5rem 0 0; }
+  .rule2 { border: 0; border-top: 1px solid var(--rule); margin: 4px 0 2rem; }
+  h1 { font-family: var(--serif); font-size: 1.9rem; line-height: 1.3; margin: 0 0 1rem; }
+  h2 { font-family: var(--serif); font-size: 1.35rem; line-height: 1.35;
+    margin: 2.5rem 0 0.75rem; padding-top: 1rem; border-top: 1px solid var(--rule2); }
+  h3 { font-family: var(--serif); font-size: 1.1rem; margin: 2rem 0 0.5rem; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
+  p { margin: 0.75rem 0; }
+  a { color: var(--accent); }
+  a:hover { color: var(--focus); }
+  blockquote { margin: 1rem 0; padding: 0.25rem 1rem;
+    border-left: 3px solid var(--accent); background: var(--paper2);
+    color: var(--muted); }
+  blockquote p { margin: 0.5rem 0; }
+  code { font-family: var(--mono); font-size: 0.875em;
+    background: var(--paper2); padding: 0.1em 0.35em; border-radius: 3px;
+    overflow-wrap: anywhere; }
+  pre { background: var(--paper2); border: 1px solid var(--rule2);
+    padding: 0.75rem 1rem; overflow-x: auto; line-height: 1.6; }
+  pre code { background: none; padding: 0; overflow-wrap: normal; }
+  h1, h2, h3, h4, p, li { overflow-wrap: anywhere; min-width: 0; }
+  .rlist { list-style: none; padding: 0; }
+  .rlist li { overflow-x: auto; margin: 0; }
+  .rlist a { display: inline-flex; align-items: center; min-height: 44px;
+    white-space: nowrap; }
+  .tw { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; font-size: 0.9rem; min-width: 100%; }
+  th, td { text-align: left; padding: 0.45rem 0.75rem; vertical-align: top;
+    border-bottom: 1px solid var(--rule2); }
+  th { font-family: var(--mono); font-weight: 600; font-size: 0.8rem;
+    letter-spacing: 0.04em; color: var(--muted);
+    border-bottom: 2px solid var(--rule); white-space: nowrap; }
+  ul, ol { padding-left: 1.5rem; }
+  li { margin: 0.35rem 0; }
+  strong { font-weight: 650; }
+  .foot { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 0.8rem; color: var(--neutral); }
+  .foot a { white-space: nowrap; display: inline-flex; min-height: 44px;
+    align-items: center; margin-right: 1.25rem; }
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="mast" aria-label="站內">
+  <a href="/">← 標本索引</a>
+  <a href="/reports/">病理報告目錄</a>
+  <a href="/measure.html">量測台 →</a>
+</nav>
+<hr class="rule"><hr class="rule2">
+<h1>病理報告 · 02 長列表未虛擬化</h1>
+<blockquote>
+<p>依 <code>docs/pathology-report-template.md</code>（版型八節，一節不刪）。
+實測數字<strong>只</strong>取自現行正典檔 <code>docs/measurements/2026-07-26-reproducibility-4x-5.json</code>
+（2026-07-26T05:52:29.671Z、CDP 機器驅動、66 筆完整掃描、<code>problems: []</code> 無異常輪、
+<code>isFullSweep: true</code>；正典地位的裁定在 <code>phase2:1057-1062</code>「才是現行的正典檔」）。
+歷史數字一律以「已作廢」或「另一 session」身分出現並標明來源 ——
+跨 session 絕對值不可比（<code>phase2:944-945</code>），臂間比值只在同一份 JSON 內部成立。
+行號會漂（<code>phase2:1195-1199</code>），本報告引用行號時儘量連同內容一起引。</p>
+</blockquote>
+<h3>02 長列表未虛擬化</h3>
+<p><strong>病症一句話</strong>：4x CPU 節流下首載，一次把 5000 列渲染成 40,021 個 DOM 節點，
+把整份 document 首屏最大那塊文字的繪製（LCP）拖到 <strong>1864ms</strong>（三輪 median）；
+<code>content-visibility</code> 一行 CSS 降到 520ms（3.6×），虛擬滾動降到 80ms（23.3×）——
+而兩段治療真正的差別在節點數：<strong>40,021 個節點還在 vs 只建 141 個</strong>。</p>
+<blockquote>
+<p>⚠️ 這句話的 LCP 標的<strong>不是那 5000 列清單</strong>，是頁面上「請不要動」那段操作說明
+（裸 <code>p</code>，<code>#specimen-root</code> 第 4 個子元素，769 × 48 @ (8, 129)，size 36672 ——
+<code>phase2:1201-1213</code> 追記）。本標本量的是「說明文字多久畫得出來，而清單把它擋住了」，
+不是「清單自己成為 LCP」。這個差別寫在兇手歸因一節，讀者靠它判斷能不能複製這個實驗。</p>
+</blockquote>
+<h4>凍結條件</h4>
+<p>同一組條件之間才能比較。任何一項改動，先前所有數字作廢。</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CPU throttle</td>
+<td><strong>4x（宣告值）</strong>，JS 偵測不到（sweep.<code>cpuThrottle: &quot;4x&quot;</code>、<code>cpuThrottlingRate: 4</code>；九筆 records 的 <code>cpuThrottle</code> 皆 <code>&quot;4x&quot;</code>）。⚠️ B 類的宣告方式與 A 類不同：節流在<strong>導覽之前</strong>打開，並用 deep-link 的 <code>cpu=4x</code> 參數宣告，不按外殼下拉選單（<code>tools/reproducibility.mjs:699-702, 714, 728-731</code>——「載入後補按一次選單」的 <code>evaluate()</code> 會插進正在量的載入期）。代價：外殼 React bundle 也在 4x 底下解析，那是每筆樣本相同的常數</td>
+</tr>
+<tr>
+<td>驅動方式</td>
+<td><strong>CDP 機器驅動</strong>（sweep.<code>driver</code>）。<strong>每一筆樣本都從一次全新的 <code>measure.html</code> 導覽開始</strong>（<code>?specimen=&amp;mode=&amp;cpu=</code>），目標 mode 就是首載的那一份 document（<code>tools/reproducibility.mjs:672-731</code>）。捲動用 <code>Input.dispatchMouseEvent</code> 的 mouseWheel 一拍一格（<code>realWheel</code>，<code>:166</code>；#2 <strong>沒有 <code>wheelTicks</code> 欄位</strong>，走逐格路徑，位元與舊版相同，<code>:520-525</code>）</td>
+</tr>
+<tr>
+<td>viewport</td>
+<td><strong>800 × 600</strong>（<code>FROZEN_VIEWPORT</code>，<code>src/specimens.ts:10</code>；<code>LONG_LIST_META.viewport</code>，<code>:235</code>）。⚠️ 實際內部寬度是 <strong>785</strong>——垂直捲軸吃掉 15px（<code>phase2:41-42</code>「這批標本一律不准寫死 800」），列的行數是寬度敏感的</td>
+</tr>
+<tr>
+<td>refreshHz</td>
+<td><strong>60</strong>（九筆 records 的 <code>refreshHz</code> 皆 60；欄位定義 <code>src/protocol.ts:68</code>）</td>
+</tr>
+<tr>
+<td>操作程序</td>
+<td>動作 <strong>scroll</strong> · 次數 <strong>10</strong> · 間隔 <strong>500ms</strong>（<code>src/specimens.ts:227-233</code>）。外加兩段靜置：<code>navQuietMs = 20000</code>（從導覽起算，蓋住外殼在 4x 底下的開機）與 <code>quietMs = 12000</code>（<code>tools/reproducibility.mjs:296-299</code>）。<strong>整段靜置一次 CDP 呼叫都不准發</strong>（<code>:733-735</code>——輪詢等於把觀測動作放進被觀測的視窗）</td>
+</tr>
+<tr>
+<td>buildId</td>
+<td><strong>0.1.0-ms191c71</strong>（九筆 records 的 <code>buildId</code>）</td>
+</tr>
+<tr>
+<td>protocolVersion</td>
+<td>凍結契約常數 <strong>1</strong>（<code>src/protocol.ts:8</code>）。⚠️ <strong>正典 JSON 沒有記錄這個欄位</strong>（頂層無 <code>conditions</code>，驅動器也不寫入）—— 這一格是宣告值，不是記錄值。見「與登記的差異」末尾</td>
+</tr>
+</tbody></table></div>
+<p>這一份標本額外的凍結條件：</p>
+<ul>
+<li><strong>B 類：<code>switchKind: &#39;reload&#39;</code></strong>（<code>src/specimens.ts:208</code>）。不是實作偏好 —— LCP 在第一次互動後定案且是 per-document 的，不重載的話第二個 mode 永遠拿不到自己的 LCP。模組因此<strong>不實作 <code>setMode()</code></strong>（<code>specimens/02-long-list.ts:293-306, 322-328</code>）。</li>
+<li><strong>一次丟棄的暖身導覽</strong>（跑 <code>modes[0]</code>，依協定必為病變版，量完不入帳；<code>tools/reproducibility.mjs:704-718</code>）。理由：deep-link 隔離修好之後剩下的位置效應是每支標本第一筆偏高，偏高的是冷啟動不是那個 mode（隔離後實測 <code>#2 broken</code> 第一筆 2824ms、之後 2016 / 1948 —— <code>phase2:999-1001</code>，<strong>另一 session 的診斷數字，僅證機制</strong>）。</li>
+<li><strong>輪轉順序</strong>（第 r 輪從 <code>modes[(i + r − 1) % n]</code> 起）留著擋單調漂移；舊「輪轉守衛」已整個移除（<code>tools/reproducibility.mjs:720-726</code>；守衛缺陷的紀錄在 <code>phase2:976-987</code>）。</li>
+<li><strong><code>inpBased: false</code>、<code>midGapSnapshot: false</code></strong>（<code>tools/reproducibility.mjs:296</code>）：不等 INP 收斂、不中途取樣。</li>
+<li>負載參數：<code>ITEM_COUNT = 5000</code>、<code>ROW_HEIGHT = 120</code>、<code>VIRTUAL_BUFFER = 5</code>、<code>DATASET_SEED = 20240202</code>（<code>specimens/02-long-list.ts:24-32</code>）。<strong><code>ROW_HEIGHT = 120</code> 同時是三件事</strong>：列高、<code>contain-intrinsic-size</code> 初值、虛擬滾動算式基礎，三處必須同一個數字，否則捲軸長度抽動 = 自己製造 CLS（<code>specimens/02-long-list.ts:25-29, 222-257</code>）。</li>
+<li>⚠️ <strong>「請不要動」那段操作說明文字是一個從未登記的凍結變因</strong>（<code>phase2:1219-1223</code>；<code>docs/HANDOFF.md:43-45</code>）。它就是 LCP 標的，改一個字就改變標的尺寸、甚至換掉標的本身 —— 本標本所有 LCP 數字都綁在這段文字的現行長度上。</li>
+<li><code>dispatchSpanMs</code> / <code>dispatchSpanNominalMs</code>：#2 的 records <strong>沒有這兩個欄位</strong>（實查正典 JSON）—— 本標本不走絕對排程，走間隔迴圈；無欄位，不是 0。</li>
+</ul>
+<h4>動工前登記的預期</h4>
+<blockquote>
+<p>登記出處：<code>docs/phase2-expected-results.md:179-231</code>（標本 #2 段）。
+修正出處：<code>phase2:326-340</code>（煙霧測試）、<code>:539-545</code>（節點數計數 bug）、<code>:936-940</code>（判 unstable）、
+<code>:951-1044</code>（<strong>B 類前導污染，本標本最重要的一節</strong>）、<code>:1119-1129</code>（裁決紀錄 §二，兩條明文作廢）、
+<code>:1201-1232</code>（LCP 標的追記）。
+<strong>這一節不准回頭改去迎合實測。</strong> 要修正就在該檔「修正紀錄」追加。
+#2 不在「比值判準四條定案」（<code>phase2:1259-1338</code>）的凍結範圍內（那是 #4 / #5 / #6），
+以下登記區間仍可據以判定，但逐條先過修正紀錄確認現行狀態。</p>
+</blockquote>
+<ul>
+<li>主指標：<strong><code>lcp</code></strong>（<code>phase2:216</code>；<code>src/specimens.ts:221</code>）。
+<code>broken</code> 4x 預期 <strong>1200~4000ms</strong>（<code>phase2:208</code>；1x 的 400~1200ms 本輪未量，見誠實揭露）。</li>
+<li>兇手段：<strong><code>lcp</code></strong>（<code>phase2:216</code>；<code>src/specimens.ts:225</code>）—— 未被任何修正取代，仍現行有效。</li>
+<li>病變 vs 治療比值：<strong>本標本沒有登記「≥ N×」硬比值</strong>。登記的是
+<code>fixed-content-visibility</code> LCP <strong>降 30~70%</strong>（<code>phase2:211</code>，等價 1.4×~3.3×）、
+<code>fixed-virtual</code> LCP <strong>絕對上限 4x &lt; 800ms</strong>（<code>:213</code>）、
+<code>fixed-virtual</code> <code>domNodeCount</code> <strong>&lt; 400</strong>（<code>:214</code>）、
+<code>fixed-content-visibility</code> <code>domNodeCount</code> <strong>不變</strong>（<code>:212</code>；括號值 ~35,000 已作廢，見下）。
+登記明文寫「<strong>這個標本最重要的一件事是『兩個治療的節點數不同』</strong>」（<code>:218-221</code>）——
+治療梯度的骨架是節點數，不是毫秒數。</li>
+<li>已作廢的登記值（引用時必須帶作廢身分）：<ul>
+<li><code>domNodeCount</code> <strong>~35,000</strong>（5000 列 × 約 7 節點，<code>:209, 212</code>）——
+實為<strong>每列 8 節點、基底 21 ⇒ 40,021</strong>（<code>:539-545</code>；<code>specimens/02-long-list.ts:94-103</code> 反解兩式
+<code>21 + 5000×8 = 40021</code> 與 <code>21 + 15×8 = 141</code> 獨立同解）。先前「40,021 符合 ~35,000」的判定
+（<code>:326-336</code>）是把計數 bug 當量測容差放過（<code>:545</code>）。</li>
+<li><code>broken</code> INP presentation 段 1x 30<del>120 / 4x 100</del>400ms（「捲動後點擊」，<code>:210</code>）——
+<strong>明文作廢</strong>（<code>:1121-1124</code>）：現行 protocol 是 scroll × 10、零點擊，而登記檔 <code>:49-51</code>
+自己寫著捲動不產生 <code>interactionId</code>。<strong>從登記那天起就不可能有數字。</strong></li>
+<li>風險 R2 的 CLS 示範（<code>:228-230</code>）—— <strong>明文作廢</strong>（<code>:1126-1129</code>）：
+<code>:188</code> 已把 <code>contain-intrinsic-size: auto 120px</code> 登記成必備、程式照做
+（<code>specimens/02-long-list.ts:254-257</code>），沒有可執行的對照臂。
+⚠️ 該作廢條目在裁決紀錄裡被誤標成「<strong>#5</strong> 的風險 R2」，內容（<code>:188</code>、<code>:228-230</code>、
+contain-intrinsic-size）全部屬於 #2 —— 誤標本身兩份 phase 檔都沒記。</li>
+</ul>
+</li>
+<li>登記在案、仍有效的風險：<ul>
+<li><strong>R1</strong>（<code>:225-227</code>）：<code>content-visibility</code> 的收益在初次渲染上可能比預期小，它真正省的是
+捲動時的樣式與版面；「若 LCP 幾乎沒降，不是治療失效，是指標選錯了 —— 要補捲動期的數字」。</li>
+<li><strong>R3</strong>（<code>:231</code>）：presentation 落在 8ms 網格上，兩段治療之間<strong>不排名</strong>。標本檔另給了第二個理由：
+虛擬滾動換來 Ctrl+F 失效、無障礙樹不完整、錨點失效（<code>specimens/02-long-list.ts:155-162</code>）。</li>
+</ul>
+</li>
+<li>登記的設計參數五項（5000 列 / 每列一方塊三行字兩 badge / <strong>頭像不用圖片</strong> / <code>auto 120px</code> /
+buffer ±5，<code>phase2:185-189</code>）與程式逐項一致（<code>specimens/02-long-list.ts:24-32, 104-137, 254-257</code>）。
+頭像不用圖片的理由是校準 D 挖出的規則（<code>phase2:30-35, 191-194</code>）：<strong>Chrome 把 &lt; 0.05 bpp 的
+低熵圖片排除在 LCP candidate 之外</strong>，5000 個純色佔位圖既拖慢載入又永遠不會成為 LCP。</li>
+<li>登記時引用的 <code>spec:1060</code> 舉例「5,000 節點 → 60 節點」（<code>phase2:221</code>）與本站設計不同源：
+buffer ±5 在 800×600 下實際渲染 <strong>15 列</strong>（records <code>renderedItems</code>），引用時要註明。</li>
+</ul>
+<h4>實測</h4>
+<p>三輪，同一組凍結條件。<strong>離散度算在每輪的 median 上，不是 max</strong>（<code>src/protocol.ts:309</code>
+「抗離群。可重現性判定用這個，不用 max」）。LCP 是 per-document 單值，每輪一筆、
+該筆即該輪 median。相對離散度 = (max − min) / median-of-three。</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>mode</th>
+<th>三輪 LCP（ms）</th>
+<th>相對離散度</th>
+<th>絕對全距</th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>broken 全部渲染</td>
+<td>1864 / 1788 / 1896</td>
+<td>5.8%（108 ÷ 1864）</td>
+<td>108ms</td>
+<td>✅ 可重現</td>
+</tr>
+<tr>
+<td>fixed-content-visibility</td>
+<td>472 / 548 / 520</td>
+<td>14.6%（76 ÷ 520）</td>
+<td>76ms</td>
+<td>✅ 可重現</td>
+</tr>
+<tr>
+<td>fixed-virtual 虛擬滾動</td>
+<td>84 / 76 / 80</td>
+<td>10.0%（8 ÷ 80）</td>
+<td><strong>8ms（&lt; 底線 50ms）</strong></td>
+<td>✅ 可重現（全距在雜訊底線內）</td>
+</tr>
+</tbody></table></div>
+<p>出處：<code>records[mode=broken,run=1..3].lcp.value</code>、<code>records[mode=fixed-content-visibility,run=1..3].lcp.value</code>、
+<code>records[mode=fixed-virtual,run=1..3].lcp.value</code>。三臂數字與 <code>phase2:1065</code> 補記的
+「02 broken 1864/1788/1896 (5.8%) cv 472/548/520 (14.6%) virtual 84/76/80 (10.0%▽)」逐位元一致。</p>
+<p>判準：相對離散度 ≤ 30%，或絕對全距在該指標雜訊底線內（LCP 50ms）。三臂皆過。
+⚠️ 只看相對離散度會把方向搞反：治療有效正是讓分母趨零 —— <code>fixed-virtual</code> 的 10.0% 全靠
+分母只有 80ms，它的絕對全距 8ms 才是「穩」的證據。</p>
+<p>次要指標（終值快照；<code>M1</code> 缺口的補法就是為了讓零互動的 B 類標本也能入帳，<code>phase2:48-55</code>）：</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>mode</th>
+<th><code>domNodeCount</code></th>
+<th><code>renderedItems</code></th>
+<th><code>droppedFramesPeak</code></th>
+<th><code>cls</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>broken</td>
+<td>40,021 / 40,021 / 40,021</td>
+<td>5000 ×3</td>
+<td>0 / 0 / 0</td>
+<td><strong>無 entry</strong>（<code>null</code> ×3）</td>
+</tr>
+<tr>
+<td>fixed-content-visibility</td>
+<td>40,021 / 40,021 / 40,021</td>
+<td>5000 ×3</td>
+<td>0 / 0 / 0</td>
+<td><strong>無 entry</strong>（<code>null</code> ×3）</td>
+</tr>
+<tr>
+<td>fixed-virtual</td>
+<td>141 / 141 / 141</td>
+<td>15 ×3</td>
+<td><strong>9 / 9 / 10</strong></td>
+<td><strong>無 entry</strong>（<code>null</code> ×3）</td>
+</tr>
+</tbody></table></div>
+<p>出處：<code>records[*].custom.domNodeCount / .renderedItems / .droppedFramesPeak</code>、<code>records[*].cls</code>。</p>
+<ul>
+<li><code>cls: null</code> 是<strong>無 entry，不是量到 0</strong>。本標本三臂設計上都不產生位移
+（<code>contain-intrinsic-size</code> 必備 + spacer 恆定高度），collector 一筆 entry 都沒收到。
+<code>clsIgnoredByInput</code> 九筆皆 0（<code>records[*].custom.clsIgnoredByInput</code>）—— 沒有位移被輸入豁免掉。</li>
+<li>INP 整組（<code>inp</code> / <code>inputDelay</code> / <code>processing</code> / <code>presentation</code>）九筆皆 <code>null</code>、
+<code>totalInteractions</code> 皆 0 —— <strong>結構性無樣本</strong>：捲動不產生 <code>interactionId</code>（規格如此，
+<code>phase2:49-51</code>），不是缺陷。</li>
+<li>⚠️ <code>fixed-virtual</code> 的 <code>droppedFramesPeak</code> 9 / 9 / 10 是<strong>全表唯一超過掉幀底線（5 幀）的臂</strong>，
+而且出現在<strong>治療臂</strong>。broken 反而三輪皆 0。這件事兩份 phase 檔都沒記，見「與登記的差異」。</li>
+</ul>
+<h4>兇手歸因</h4>
+<p>登記兇手 <code>lcp</code>（<code>phase2:216</code>）。INP 三段結構性無樣本，表格照模板列出、如實填「無樣本」：</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>broken</th>
+<th>fixed-content-visibility</th>
+<th>fixed-virtual</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>inputDelay</td>
+<td>無樣本（<code>null</code>，零互動）</td>
+<td>無樣本</td>
+<td>無樣本</td>
+</tr>
+<tr>
+<td>processing</td>
+<td>無樣本</td>
+<td>無樣本</td>
+<td>無樣本</td>
+</tr>
+<tr>
+<td>presentation</td>
+<td>無樣本</td>
+<td>無樣本</td>
+<td>無樣本</td>
+</tr>
+<tr>
+<td>LoAF forcedStyleAndLayout</td>
+<td><strong>無強制版面樣本</strong>（<code>forcedSamples: []</code>、<code>forcedMedian: null</code>）</td>
+<td>同左</td>
+<td><strong>無 LoAF 幀</strong>（<code>loafPickedBy: &quot;none&quot;</code>、<code>forcedPeak: null</code>）</td>
+</tr>
+<tr>
+<td>loafPickedBy</td>
+<td><code>specimenScriptDuration</code>（備援路徑）</td>
+<td><code>specimenScriptDuration</code></td>
+<td><code>none</code></td>
+</tr>
+<tr>
+<td>specimenScript（備援選出的幀）</td>
+<td>172.5 / 156.8 / 162.0 ms</td>
+<td>159.3 / 191.6 / 160.2 ms</td>
+<td>無（<code>null</code> ×3）</td>
+</tr>
+<tr>
+<td>sourceFunctionName</td>
+<td>無（<code>forcedFn: &quot;&quot;</code>）</td>
+<td>無</td>
+<td>無（<code>forcedFn: null</code>）</td>
+</tr>
+</tbody></table></div>
+<p>出處：<code>records[*].forcedSamples / .forcedMedian / .forcedPeak / .loafPickedBy / .specimenScript / .forcedFn</code>。
+依模板規則，<code>loafPickedBy</code> 不是 <code>forcedStyleAndLayout</code> 的幀時，<code>forcedFn</code> 不構成
+「有強制版面幀」的證據 —— 本標本三臂沒有任何一幀是靠強制版面選出來的。
+病變不走強制重排路徑（那是標本 #3 的病），它走的是<strong>初次渲染把首屏繪製整段推遲</strong>。</p>
+<p><strong>LCP 標的的身分</strong>（<code>phase2:1201-1232</code> 追記，2026-07-26 解決 <code>:338-340</code> 登記的待辦）：</p>
+<ul>
+<li>九筆 records 的 <code>lcp.el</code> 一律是裸 <code>p</code>（無 id 無 class），光靠協定欄位查不出是誰。</li>
+<li>用 CDP 在 document 建立前注入 <code>PerformanceObserver</code>（<code>buffered: true</code>）抓到元素本身：
+<code>tag=p · parent=#specimen-root · 第 4 個子元素 · size=36672 · rect 769 × 48 @ (8, 129)</code>，
+內文是「<strong>載入後請先不要動</strong>……」那段操作說明（<code>phase2:1208-1211</code>）。</li>
+<li><strong>這不是缺陷</strong>：LCP 的定義就是最大的一次內容繪製，單一裝置列很小，整段粗體說明
+（769 × 48）贏過任何一列。量到的仍是真實的「這一頁要多久才畫得出最大那塊文字」，
+而它確實被 5000 列的渲染擋住（<code>phase2:1215-1217</code>）。</li>
+<li>所以歸因的誠實寫法是：<strong>本標本量的是「說明文字多久畫得出來，而清單把它擋住了」</strong>，
+不是「清單自己多久畫得出來」（<code>phase2:1224-1225</code>）。broken 擋 1864ms、
+<code>content-visibility</code> 只渲染首屏附近所以剩 520ms、虛擬滾動只建 141 個節點所以剩 80ms。</li>
+<li>⚠️ <strong>治療臂的 LCP 標的是否仍是同一個元素，本輪沒有逐臂查</strong>（<code>phase2:1226-1229</code>）。
+<code>fixed-virtual</code> 只渲染 15 列，說明文字大概率仍是最大那塊 —— 但這是推論不是實測。
+協定目前只送裸 tag 的 <code>elementDescriptor</code>，分不出是哪一個 <code>p</code>；這是 <code>RunResult</code>
+該加欄位的地方（凍結契約只准加欄位）。</li>
+</ul>
+<p>三輪兇手段是否一致：<strong>是</strong>（描述子層級：<code>lcp.el</code> 九筆皆 <code>p</code>；三臂三輪的差異全部呈現在
+<code>lcp.value</code> 上）。但要註記：<code>tools/analyze-repro.mjs</code> 的「三輪一致兇手 vs 登記值」判準
+<strong>值域涵蓋不到 <code>lcp</code></strong>（<code>phase2:1166-1180</code>：#2 落在 <code>not-an-inp-segment</code>，不報警）——
+#2 登記的兇手從來沒有被任何自動判準驗證過，上面的「一致」是人工從 records 讀出來的。</p>
+<blockquote>
+<p><code>presentation</code> 繼承 <code>duration</code> 的 8ms 量化，會落在 8ms 網格上。
+對量級對照無影響，只在替兩個都已經很快的方案排名時咬人（本標本兩段治療刻意不排名）。
+<code>blockingDuration</code> 是整幀的值，<strong>含外殼</strong>，規格上無法拆到單一 script；
+<code>forcedStyleAndLayoutDuration</code> 是逐 script 的，所以只有它能乾淨濾掉外殼貢獻 ——
+本標本兩者都沒有進入判定（無強制版面樣本），列出是為了讓讀者確認「沒有」。</p>
+</blockquote>
+<h4>治療梯度</h4>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>治療</th>
+<th>LCP（三輪 median）</th>
+<th>相對病變</th>
+<th>代價</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>一：<code>content-visibility: auto</code> + <code>contain-intrinsic-size: auto 120px</code></td>
+<td>520ms</td>
+<td><strong>3.6×</strong>（1864 ÷ 520）</td>
+<td>40,021 個節點<strong>還在 DOM 裡</strong>（<code>domNodeCount</code> 與病變逐位元相同）；必須配對 <code>contain-intrinsic-size</code>，忘了就把渲染成本換成 CLS（<code>specimens/02-long-list.ts:247-257</code>）；需要瀏覽器支援（mode <code>requires: [&#39;content-visibility&#39;]</code>，<code>src/specimens.ts:216</code>）</td>
+</tr>
+<tr>
+<td>二：虛擬滾動（可視範圍 ± 5 列）</td>
+<td>80ms</td>
+<td><strong>23.3×</strong>（1864 ÷ 80）</td>
+<td>節點只建 141 個，但換來真實的複雜度：Ctrl+F 找不到沒渲染的列、無障礙樹不完整、錨點失效（<code>specimens/02-long-list.ts:155-162</code>，<strong>散文宣稱非量測</strong>）；scroll listener + spacer 維護；<strong>捲動期掉幀 9 / 9 / 10（本輪唯一超過 5 幀底線的臂</strong>，<code>records[mode=fixed-virtual,run=1..3].custom.droppedFramesPeak</code>）</td>
+</tr>
+</tbody></table></div>
+<p>兩臂 LCP median（520 / 80ms）都在雜訊底線 50ms 之上，比值可報。
+治療版落進雜訊底線時不報比值 —— 本標本沒有觸發這條，但 <code>fixed-virtual</code> 的<strong>全距</strong>（8ms）
+已在底線之下，再快一個檔次這個比值就該收起來了。</p>
+<p><strong>兩段治療之間不排名</strong>（登記 R3，<code>phase2:231</code>）。毫秒數上 80 &lt; 520，但排名毫無意義：
+登記明文說本標本最重要的是節點數之差（<code>phase2:218-221</code>），而那一欄是
+<strong>40,021 vs 141（283.8×，40021 ÷ 141）</strong>、<code>renderedItems</code> <strong>5000 vs 15</strong> ——
+<code>content-visibility</code> 是「一行 CSS、結構一字不動」（病變與治療一共用同一支
+<code>renderEverything()</code>，差別只有一個 class，<code>specimens/02-long-list.ts:141-153</code>），
+虛擬滾動是「根本不建那些節點」，各自的代價欄不同，讀者按自己的相容性與複雜度預算選。</p>
+<p>無效或反向的治療：無 —— 但<strong>治療二在次要指標上有一筆反向</strong>（捲動期掉幀 9/9/10 vs
+病變的 0/0/0），照實列在代價欄。它是 <code>renderWindow()</code> 每次捲動重建視窗的真實成本，
+不是雜訊（三輪 9/9/10，離散度 (10−9)/9 = 11%，穩定重現）。</p>
+<h4>與登記的差異</h4>
+<p>逐條對照，三種結局分開寫：</p>
+<ul>
+<li><strong>符合（誤差 ≤ 30%）</strong>：<ul>
+<li><code>broken</code> LCP 4x 登記 1200~4000ms（<code>phase2:208</code>）→ 實測 1864 / 1788 / 1896，三輪全in ✅</li>
+<li><code>fixed-virtual</code> LCP 4x &lt; 800ms（<code>:213</code>）→ 80ms，餘裕 10 倍 ✅（上限鬆，但登記如此）</li>
+<li><code>fixed-virtual</code> <code>domNodeCount</code> &lt; 400（<code>:214</code>）→ 141 ✅</li>
+<li><code>fixed-content-visibility</code> <code>domNodeCount</code> 不變（<code>:212</code>）→ 40,021，與病變逐位元相同 ✅
+（括號裡的 ~35,000 已作廢，實值 40,021 出自 <code>:539-545</code> 的反解）</li>
+<li><code>fixed-content-visibility</code> LCP 降 30<del>70%（<code>:211</code>）→ 實測<strong>降 72.1%</strong>
+（(1864 − 520) ÷ 1864；比值形式 3.6× vs 登記等價 1.4</del>3.3×）——
+<strong>貼線略過登記上緣</strong>（超出 2.1 個百分點、比值超出上緣 8%），在 30% 帶內判符合，
+但方向要說清楚：是<strong>治療比登記的天花板更有效</strong>，不是失效。</li>
+<li>兇手 <code>lcp</code>（<code>:216</code>）→ 三臂三輪的差異全部呈現在 LCP 上 ✅（惟自動判準涵蓋不到，見兇手歸因）</li>
+</ul>
+</li>
+<li><strong>數值落空（同方向但差一個數量級）</strong>：無。</li>
+<li><strong>方向落空（結論相反或兇手不同）</strong>：登記表內無。
+但<strong>一條未登記的頁面宣稱被本輪資料反向</strong>：標本副標與檔頭寫「LCP 被拖垮，<strong>捲動掉幀</strong>」
+（<code>src/specimens.ts:205</code>；<code>specimens/02-long-list.ts:4</code>），而正典資料裡 <code>broken</code> 的
+<code>droppedFramesPeak</code> 三輪皆 <strong>0</strong>，唯一掉幀的是治療臂 <code>fixed-virtual</code>（9 / 9 / 10）。
+兩個結構性原因讓這個宣稱在現行儀器下<strong>量不到</strong>：
+① 掉幀觀測在 <code>mount()</code> 完成後才啟動、外加 500ms 暖機（<code>src/measure/runtime.ts:444-460</code>），
+病變版最重的初次渲染整段落在觀測窗之外；
+② 全渲染完成後的捲動是合成器執行緒的事，主執行緒無工作可掉（分析推論，未實測驗證）。
+這條<strong>兩份 phase 檔都沒記</strong>，處置留給主執行緒（改文案，或補一個蓋住載入期的掉幀觀測 ——
+後者動儀器，要走處置順序 ③）。</li>
+<li><strong>登記風險的結局</strong>：<ul>
+<li>R1（cv 的 LCP 收益可能小）<strong>沒有成真</strong> —— 降 72.1%，貼著登記上緣的外側。
+但 R1 要求的「補捲動期數字」<strong>仍未執行</strong>，而本輪順帶量到的捲動期掉幀（broken 0/0/0）
+暗示在「10 拍 × 120px」這個溫和的捲動強度下，<code>content-visibility</code> 的主場根本沒有戲可演
+——要示範它省捲動成本，得加大捲動強度，那是改凍結變因的下一輪工作。</li>
+<li>R2（CLS 示範）<strong>結構上不可執行，已明文作廢</strong>（<code>phase2:1126-1129</code>，誤標 #5 見登記節）。</li>
+<li>R3（不排名）遵守。</li>
+</ul>
+</li>
+<li><strong>INP presentation 段</strong>（<code>:210</code>）：已明文作廢（<code>:1121-1124</code>）。本輪資料佐證：
+<code>totalInteractions</code> 九筆皆 0。這一格從登記起就結構上量不到，不算落空，算<strong>登記錯誤</strong>。</li>
+</ul>
+<p>處置順序固定：① 查環境 ② 換更精確的驅動方式 ③ <strong>最後</strong>才動 protocol。
+本標本這一輪正是按這個順序走過來的實例：上午判 unstable（<code>broken</code> 34.0%、
+<code>fixed-virtual</code> 110.7%，<code>phase2:936-940</code>，該輪九筆已全數作廢 <code>:1023</code>）——
+查出來<strong>不是標本不穩，是量測方式不穩</strong>（B 類前導污染，<code>:951-1015</code>）：
+iframe 與外殼共用 renderer 主執行緒，前一份 document 的拆除落在新 document 的時鐘內，
+而 LCP 取 <code>entry.startTime</code>。修法（deep-link 全新導覽 + 節流前置 + 暖身丟棄）動的是
+驅動方式（②），不是 protocol（③），標本一個字沒改。修完三臂離散度 5.8 / 14.6 / 10.0%。
+汙染有多大，同一輪內的對照（<code>tools/b-class-isolation.mjs</code>，皆 4x）：<code>fixed-virtual</code>
+前導 <code>fixed-content-visibility</code> 時 888~892ms、deep-link 全新導覽 100 / 92 / 108ms ——
+<strong>污染項約 790ms，是訊號的八倍</strong>（<code>phase2:1032-1037</code>）。
+⚠️ 這個缺陷<strong>沒有症狀</strong>（舊迴圈讓前導恆定、污染成常數，三輪離散度照樣漂亮，<code>:972-974</code>）——
+任何人把 B 類改回「按按鈕切 mode」，它就無症狀地回來，防線只有回歸測試。</p>
+<p><strong>儀器帳（非標本缺陷）另兩筆</strong>：
+① 舊工具註解曾記 <code>fixed-virtual</code> 32 / 32 / 40ms，與正式三輪差約三倍 —— 已查明是
+前一版探針把節流放在 document 載完後才套，載入期實跑 1x，三倍正是節流率本身
+（<code>tools/reproducibility.mjs:692-694</code>）。引用不標條件，等於拿 1x 的數字描述 4x 的結論。
+② <strong>正典 JSON 沒有 <code>protocolVersion</code> 欄位</strong>：頂層鍵只有 <code>measuredAt / driver / cpuThrottle / cpuThrottlingRate / runsPerMode / specimensCovered / isFullSweep / records / problems / consoleErrors</code>，驅動器程式全文也不寫入該欄。凍結契約的常數在 <code>src/protocol.ts:8</code>，
+但「JSON 值必須等於 1」這條驗證<strong>無從執行</strong> —— 兩份 phase 檔都沒記，留給主執行緒。</p>
+<h4>誠實揭露</h4>
+<ul>
+<li><strong>這個標本沒有示範的東西</strong>：<ul>
+<li><strong>LCP 標的不是列，是儀器自己的操作說明文字</strong>（<code>phase2:1201-1225</code>）。本標本示範的是
+「整份 document 的首屏繪製被 5000 列拖慢」，不是「5000 列自己成為 LCP 標的」。
+要示範後者得有大面積的真實內容（真圖片），那是加碼 #7 的題目。</li>
+<li><strong>「頭像」不是圖片</strong>，是 CSS 上色的字母方塊（<code>phase2:187, 191-194</code>；
+<code>specimens/02-long-list.ts:15-18, 109-113</code>）。機制為真（低熵圖片 &lt; 0.05 bpp 不入
+LCP candidate，所以圖片版根本量不到），但「長列表拖垮 LCP」含載入解碼的完整故事沒有示範。</li>
+<li><strong>沒有示範 <code>content-visibility</code> 真正的主場</strong>（捲動期的樣式與版面節省，登記 R1）。
+本輪的捲動強度下病變版捲動期掉幀為 0 —— 這個主場在現行 protocol 裡<strong>沒有戲可演</strong>。</li>
+<li><strong>沒有示範「忘設 <code>contain-intrinsic-size</code> 會製造 CLS」</strong>——沒有那個對照臂，已明文作廢。</li>
+<li><strong>虛擬滾動的代價大半只有寫、沒有量</strong>（Ctrl+F / 無障礙樹 / 錨點，
+<code>specimens/02-long-list.ts:155-162</code>）。本輪唯一量到的代價是捲動期掉幀 9 / 9 / 10。</li>
+<li><strong>沒有示範「壞掉的虛擬滾動」</strong>。<code>renderWindow()</code> 的「區間沒變就 return」護欄
+（<code>specimens/02-long-list.ts:173-175</code>）擋掉一個很容易踩的失敗模式（退化成標本 #6 的
+高頻重建），但那個失敗模式沒有做成一臂。</li>
+<li><strong>列是絕對定位、捲軸由 spacer 撐出</strong>（<code>specimens/02-long-list.ts:228-237, 275-277</code>）。
+真實世界的長列表多半是 flow layout，layout 成本結構不同 —— 這是讓「捲動距離」
+成為凍結變因付的代價。</li>
+</ul>
+</li>
+<li><strong>已知會讓數字失真的因素</strong>：<ul>
+<li><strong>B 類前導污染</strong>（已修，<code>phase2:951-1015</code>；回歸測試 <code>tools/b-class-isolation.mjs</code>）。
+缺陷無症狀，改回按鈕切 mode 就會無症狀復發。</li>
+<li><strong>冷啟動效應未量化</strong>（<code>phase2:1055, 999-1001</code>）：「丟一次暖身」是經驗值不是量出來的門檻。</li>
+<li><strong>靜置期任何 CDP 呼叫都會污染載入期</strong>（<code>tools/reproducibility.mjs:292-299, 733-735</code>）。</li>
+<li><strong>節流必須在導覽前打開</strong>（<code>phase2:994-996</code>）；外殼 bundle 因此也在 4x 下解析（常數項）。</li>
+<li><strong>捲動也算互動，會讓 LCP 提前定案</strong>（<code>src/specimens.ts:231-232</code>；
+<code>specimens/02-long-list.ts:262-264</code>）—— 靜置不足時主指標直接報廢。</li>
+<li><strong>viewport 實際內部寬度 785</strong>（<code>phase2:41-42</code>），列的行數是寬度敏感的。</li>
+<li><strong><code>domNodeCount</code> 是 <code>document.querySelectorAll(&#39;*&#39;).length</code></strong>（<code>specimens/02-long-list.ts:194-197</code>），
+含基底 21 個節點，不是「列的節點數」—— 把它讀成 5000 × 每列節點數正是 7 vs 8 錯誤的來源。</li>
+<li><strong>掉幀觀測不含 mount 期</strong>（<code>src/measure/runtime.ts:444-460</code>）：<code>droppedFramesPeak = 0</code>
+只代表「觀測窗內沒掉」，不代表載入不卡。</li>
+<li><strong>跨 session 絕對值不可比</strong>（<code>phase2:944-945</code>；<code>phase1:446-456</code>）；
+治療臂比值跨 session 更是無效（<code>phase2:1085-1090</code>，比「絕對值不可比」強一級）。</li>
+<li><code>tools/analyze-repro.mjs</code> 的 <code>clsValue</code> 曾把「沒量到」與「真的是 0」併成同一個值
+（<code>phase2:552-553</code>；<code>:1184-1186</code> 記為已修）—— 本報告的 CLS 欄直接讀 records 的 <code>null</code>，
+不經該工具。</li>
+<li><strong>機器負載會讓驗收掉分</strong>（<code>CLAUDE.md</code>：load &lt; 2 時 13/13，3.7<del>5.8 掉到 8</del>11）。</li>
+</ul>
+</li>
+<li><strong>換機器後必須重跑什麼才能沿用結論</strong>：<ol>
+<li><strong>先重跑 <code>tools/b-class-isolation.mjs</code></strong>（<code>phase2:963</code>）—— 這個缺陷沒有症狀，
+沒跑過就不能相信任何 LCP 數字。</li>
+<li>重跑校準 D（LCP 排程，+2.9%）與校準 C（CLS 解析解，誤差 0.15%）（<code>phase2:23-28, 313-324</code>），
+並重驗低熵圖片規則（&lt; 0.05 bpp）在新 Chromium 上還成不成立 ——
+「頭像不用圖片」的整個設計建立在它上面。</li>
+<li>重驗 <code>navQuietMs = 20000</code> 夠不夠（慢機器上不夠就會在 LCP 定案前開捲，主指標報廢）。</li>
+<li>重量 viewport 實際內部寬度（捲軸寬度跨平台不同）。</li>
+<li>重讀 <code>refreshHz</code>（掉幀門檻由它推導）。</li>
+<li>確認瀏覽器支援 <code>content-visibility</code> / <code>contain-intrinsic-size: auto</code>
+（<code>src/specimens.ts:216</code>）—— 不支援時面板要顯示「瀏覽器沒有這個 API」。</li>
+<li>重跑 <code>node tools/acceptance.mjs</code>（13 條全綠），跑前先看 <code>uptime</code>。</li>
+<li>兩支工具寫死不同瀏覽器路徑（<code>tools/acceptance.mjs</code> 是 <code>/usr/bin/brave-browser</code>、
+<code>tools/reproducibility.mjs:23</code> 是 <code>/opt/brave.com/brave/brave</code>），兩處都要改。</li>
+</ol>
+</li>
+<li><strong>本輪未做的事</strong>：<ul>
+<li><strong>捲動期數字沒有補</strong>（R1 明文要求）。<code>droppedFramesPeak</code> 有上報但沒進任何判定，
+而它顯示現行捲動強度下沒有東西可省。</li>
+<li><strong>治療臂的 LCP 標的沒有逐臂驗證</strong>（<code>phase2:1226-1229</code>，僅推論）；
+協定的 <code>elementDescriptor</code> 只有裸 tag，<code>RunResult</code> 待加欄位。</li>
+<li><strong>CLS 對照臂沒有做</strong>（已作廢，要做得另開一臂）。</li>
+<li><strong>1x 的正式三輪從未跑過</strong>。登記的 1x 區間（<code>phase2:208-214</code>）至今只有 2026-07-25 煙霧測試
+支撐（<code>broken</code> 384ms、<code>fixed-virtual</code> 84ms —— <code>phase2:326-336</code>，<strong>已作廢</strong>：該輪 B 類數字
+全數由 <code>:1024</code> 作廢，其判定並被 <code>:545</code> 部分推翻）。</li>
+<li><strong>人手複驗沒做</strong>（全部 CDP 機器驅動）。</li>
+<li><strong><code>?validate=1</code> 的 web-vitals 對帳沒納入三輪量測</strong>（開關在 <code>src/shell/App.tsx</code>；
+校準期的對帳 <code>deltaLcp = 0</code> / <code>deltaCls = 0</code> 出自 <code>phase2:322-324</code>，另一 session）。</li>
+<li><strong>冷啟動效應沒有量化</strong>（多大、衰減多快；<code>phase2:1055</code>）。</li>
+</ul>
+</li>
+</ul>
+
+<footer class="foot">
+  <p>每個數字在文中都附了 JSON 欄位路徑或登記檔行號 ——
+  原始資料在 <a href="https://github.com/BardKidd/FrontendMuseum">GitHub repo</a> 的
+  <code>docs/measurements/</code>，可自行覆算。臂間比值只在同一份 JSON 內部成立。</p>
+  <p><a href="/">← 標本索引</a> <a href="/reports/">報告目錄</a> <a href="/measure.html">量測台 →</a></p>
+</footer>
+</div>
+</body>
+</html>
