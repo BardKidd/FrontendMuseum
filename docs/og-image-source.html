@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-Hant">
+<!-- OG image 母版 1200×630。沿用首頁定案系統（Almanac · Stat-Led · anchor hue 28）。
+     數字出處：20.1× = docs/measurements/2026-07-26-reproducibility-4x-6.json
+     的 02-long-list broken 2012 → fixed-virtual 100（LCP median-of-3 相除，analyze-repro 輸出）。
+     66 筆 = 同檔 records 數；13/13 = tools/acceptance.mjs 對生產站實跑。 -->
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --paper:   oklch(97%   0.008 80);
+    --paper2:  oklch(94.5% 0.011 78);
+    --rule:    oklch(84%   0.010 70);
+    --neutral: oklch(58%   0.009 60);
+    --muted:   oklch(43%   0.009 55);
+    --ink:     oklch(21%   0.011 45);
+    --accent:  oklch(45%   0.145 28);
+    --serif: ui-serif, "Noto Serif CJK TC", "Noto Serif TC", Georgia, serif;
+    --sans:  ui-sans-serif, system-ui, "Noto Sans CJK TC", sans-serif;
+    --mono:  ui-monospace, "Noto Sans Mono CJK TC", Menlo, monospace;
+  }
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 630px; overflow: hidden;
+    background: var(--paper); color: var(--ink);
+    display: flex; flex-direction: column;
+    padding: 52px 64px 40px;
+  }
+  .mast-line {
+    font-family: var(--mono); font-size: 19px; letter-spacing: 0.06em;
+    color: var(--muted); display: flex; justify-content: space-between;
+  }
+  .rule { border: 0; border-top: 3px solid var(--ink); margin: 14px 0 0; }
+  .rule-thin { border: 0; border-top: 1px solid var(--rule); margin: 6px 0 0; }
+  .title {
+    font-family: var(--serif); font-weight: 700; font-size: 84px;
+    letter-spacing: 0.01em; margin-top: 40px;
+  }
+  .claim {
+    font-family: var(--sans); font-size: 27px; color: var(--muted);
+    margin-top: 18px; line-height: 1.5;
+  }
+  .stat-row {
+    display: flex; align-items: baseline; gap: 28px; margin-top: 34px;
+  }
+  .stat-num {
+    font-family: var(--serif); font-weight: 700; font-size: 150px;
+    line-height: 1; color: var(--accent); letter-spacing: -0.01em;
+  }
+  .stat-cap {
+    font-family: var(--sans); font-size: 24px; color: var(--muted); line-height: 1.55;
+    padding-bottom: 14px;
+  }
+  .stat-cap b { color: var(--ink); font-weight: 600; }
+  .colophon {
+    margin-top: auto; font-family: var(--mono); font-size: 19px;
+    color: var(--neutral); letter-spacing: 0.04em;
+    display: flex; justify-content: space-between;
+    border-top: 1px solid var(--rule); padding-top: 16px;
+  }
+</style>
+</head>
+<body>
+  <p class="mast-line"><span>前端效能病理實驗</span><span>frontendmuseum.pages.dev</span></p>
+  <hr class="rule"><hr class="rule-thin">
+  <h1 class="title">前端效能病理標本館</h1>
+  <p class="claim">其他變因全部凍結時，翻動這一個變因，產生這個差距 —— 可重現，可覆算。</p>
+  <div class="stat-row">
+    <span class="stat-num">20.1×</span>
+    <span class="stat-cap"><b>長列表未虛擬化</b>：病變 → 治療的 LCP 實測差距<br>同一份原始資料三輪，臂間相除，附欄位路徑</span>
+  </div>
+  <p class="colophon">
+    <span>六個標本 · 66 筆原始資料 · 宣告 4x CPU throttle</span>
+    <span>零外部請求 · 13/13 驗收</span>
+  </p>
+</body>
+</html>
