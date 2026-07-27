@@ -6,8 +6,9 @@
 
 ## 一句話現況
 
-**Phase 3 進行中。** 第二篇文章已發出、面板與外殼的視覺設計完成、
-B 類量測的前導污染修好並重量、判準補了一條、29 條登記檔不一致逐條處置。
+**Phase 3 完成（2026-07-27）。站已上線：<https://frontendmuseum.pages.dev>。**
+六份病理報告、三篇文章、判準定案並首次全過、儀器修正、部署驗收全綠、OG image —— 全數收尾。
+掛帳不擋事的只剩：人手複驗、自訂網域（可選）、chrony 治本（見部署一節）。
 
 `npm run acceptance` **13 / 13**。外殼成本 4x median **0.00ms**（閘門是漲幅 > 2ms）。
 **現行正典原始資料：`docs/measurements/2026-07-26-reproducibility-4x-6.json`**
@@ -74,8 +75,9 @@ B 類量測的前導污染修好並重量、判準補了一條、29 條登記檔
 - ~~「為什麼做這個」總覽文章~~ **（已定稿）** `docs/articles/03-why-this-museum.md`，
   含對第一篇 checksum 54168 的規矩 5 更正
 - ~~首頁六列數字還指著 `-5.json`~~ **（已換 `-6.json`）** 六列與來源宣告逐筆換畢
-- **還剩：OG image**（Phase 3 最後一項）；掛帳不急：人手複驗、自訂網域（可選）、
-  chrony 治本設定（見部署一節時鐘事件）
+- ~~OG image~~ **（2026-07-27 完成，Phase 3 至此全部收尾）** `public/og.png`（1200×630，
+  Almanac/Stat-Led，主數字 20.1× 出自正典 -6.json），母版 `docs/og-image-source.html`，
+  og meta 已上線驗證。掛帳不急：人手複驗、自訂網域（可選）、chrony 治本（見部署一節）
 
 ---
 
