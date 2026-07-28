@@ -5,7 +5,7 @@
 > 檔內 `records[...]` 一律指本份 JSON 中 `specimenId = "01-main-thread-block"` 的那九筆；
 > `sweep.*` 指其頂層欄位。其他任何數字都是登記值、已作廢值或另一 session 的值，逐處標明。
 
-### 01 主執行緒阻塞（Main-thread Block）
+## 01 主執行緒阻塞（Main-thread Block）
 
 **病症一句話**：在 17ms 絕對排程的十連發點擊下（機器節拍，非人手），click handler 同步排序
 五萬筆訂單把主執行緒整段佔住，INP（n = 10，取 max）三輪 median 1028 / 896 / 796ms
@@ -17,7 +17,7 @@
 > 也刻意**不寫「模擬使用者連打」**：人手約 150ms 一下，大於單次排序成本，事件根本不排隊，
 > 那是另一個實驗（`src/specimens.ts:120-123`、`specimens/01-main-thread-block.ts:26-28`）。
 
-#### 凍結條件
+## 凍結條件
 
 同一組條件之間才能比較。任何一項改動，先前所有數字作廢。
 
@@ -47,7 +47,7 @@
   九筆 `records[].isMaxNotP98` 皆 true）。
 - `sweep.problems` 為空陣列 = 全掃描無異常輪；`consoleErrors` 亦空。
 
-#### 動工前登記的預期
+## 動工前登記的預期
 
 > 登記出處：`docs/phase1-expected-results.md:82-138`（標本 #1 段，2026-07-25 登記；
 > 該段自我揭露「不是盲預測」，`:84-86`）。
@@ -93,7 +93,7 @@
   `calibrationChecksumMatch` 必須為 1（`:685-698`）；
   **L5** 治療臂重疊處理是**排隊**不是取消，三臂都做完十次排序（`:466-482`）。
 
-#### 實測
+## 實測
 
 三輪，同一組凍結條件。**離散度算在每輪的 median 上，不是 max**（`src/protocol.ts:309`：
 「抗離群。可重現性判定用這個，不用 max」）。每輪 median 直接引自 `records[].stats.median`，
@@ -137,7 +137,7 @@
 量級與趨勢相符；差值方向合理（算式的 S 只計排序，handler 還付 renderSummary 等成本）。
 逐發驗證仍未做（只上報 max，見誠實揭露）。
 
-#### 兇手歸因
+## 兇手歸因
 
 INP 代表樣本的分段拆解，取自 `records[].inputDelay / processing / presentation`（單位 ms）：
 
@@ -181,7 +181,7 @@ LoAF 欄的說明：九筆 `records[].forcedSamples` 皆空陣列、`forcedMedia
 796.3ms 等）**整欄不可信**，本報告不引用它下任何結論。標本自己記過這條 trip-wire：
 同一組條件三輪跑出 72.1 / 1340.9 / 1225.4（`specimens/01-main-thread-block.ts:366-368`）。
 
-#### 治療梯度
+## 治療梯度
 
 | 治療 | INP median（三輪） | 相對病變 | 代價 |
 |---|---|---|---|
@@ -202,7 +202,7 @@ LoAF 欄的說明：九筆 `records[].forcedSamples` 皆空陣列、`forcedMedia
 它從「排序」換成「複製」，而複製的那一半還留在主執行緒上
 （`specimens/01-main-thread-block.ts:602-616` 的設計說明）。
 
-#### 與登記的差異
+## 與登記的差異
 
 逐條對照，三種結局分開寫：
 
@@ -247,7 +247,7 @@ LoAF 欄的說明：九筆 `records[].forcedSamples` 皆空陣列、`forcedMedia
 輪內 spread 都在 73~76% —— 交界機制下代表樣本對時序敏感的直接痕跡，
 與跨輪離散度（25.9% / 34.5%）是兩個不同的量，不可混讀。
 
-#### 誠實揭露
+## 誠實揭露
 
 **（一）這個標本沒有示範的東西**
 

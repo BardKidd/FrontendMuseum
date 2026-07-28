@@ -28,10 +28,13 @@
  * 打進面板內部。panel.css 對外殼守住了「零全域選擇器」，這個檔案對面板守同一條線。
  * 唯二的全域規則是 `body` 與深色鎖定，理由見下。
  *
- * ── 為什麼沒有動 measure.html 裡那個「← 回標本館首頁」連結 ──
- * 它刻意放在 `#root` 外面、刻意零樣式（measure.html 的註解）。那是別人登記過的決定，
- * 而 measure.html 不在本輪的所有權範圍內。所以這裡不寫任何 `a` 規則 ——
- * 它會維持瀏覽器預設樣式，這是已知且刻意的。
+ * ── measure.html 裡那個「← 回標本館首頁」連結 ──
+ * 它在 `#root` 外面（不進 React 樹、不參與重繪）。2026-07-28 之前是刻意零樣式，
+ * 代價是它以瀏覽器預設藍底線連結出現在量測台的第一個像素上 —— 整站唯一沒排版的元素，
+ * 看起來像壞掉，而且高 24px（點擊目標下限 44px）。
+ * 現在用單一類別選擇器 `.shell-home` 上樣式：靜態規則，套用一次於首次版面，
+ * 之後永不重算，所以「不落進待量的那一段」這個前提沒有被破壞。
+ * 仍然不寫任何裸 `a` 規則 —— 那會打進面板內部。
  */
 
 /* tokens.css 的檔頭寫明「要把這套系統帶到別的頁面時 import 這個檔」。
@@ -93,22 +96,42 @@ body {
   padding: var(--space-lg) var(--space-lg) var(--space-3xl);
 }
 
-/* 區塊標籤。中文沒有小型大寫可用，所以靠字級 + 字距 + 弱化色分層。
-   與面板的 `.rep-h` 同一個語彙 —— 兩邊看起來要是同一份報告。 */
+/* measure.html 裡 `#root` 之外那個回首頁連結（理由見檔頭）。
+   四道 gate 逐條：hover 只做顏色、44px 靠 inline-flex 撐、不加 padding-block、
+   單行 nowrap。與 `.shell-link` 同一個語彙，但它在 `.shell` 之外，所以獨立一條。 */
+.shell-home {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-inline: var(--space-lg);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+}
+.shell-home:hover { color: var(--color-focus); }
+
+/* 區塊標籤。與面板的 `.rep-h` 逐條同一套 —— 兩邊看起來要是同一份報告。
+   改動理由寫在 panel.css 的 `.rep-h`：舊值 12px + 弱化色跟內文同級，
+   實測整頁只有兩級字（`{11:2, 12:63, 14:37, 16:6}`），沒有可掃視的邊界。 */
 .shell-h {
   margin: 0 0 var(--space-sm);
   font-family: var(--font-body);
-  font-size: var(--text-xs);
+  font-size: var(--text-base);
   font-weight: 600;
-  letter-spacing: 0.14em;
-  color: var(--color-muted);
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  color: var(--color-ink);
 }
 
-/* 註腳級的說明文字。外殼上的誠實揭露大部分是這一級 —— 弱化但**不隱藏** */
+/* 註腳級的說明文字。外殼上的誠實揭露大部分是這一級 —— 弱化但**不隱藏**。
+   12px → 14px 的理由同 panel.css 的 `.rep-note`。 */
 .shell-note {
   margin: var(--space-xs) 0 0;
   max-width: var(--measure);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   line-height: 1.55;
   color: var(--color-muted);
 }
@@ -461,12 +484,48 @@ body {
   max-width: var(--measure);
 }
 
+/* ─────────── 操作提示（展示框正上方）─────────── */
+
+/* 操作者照著這一塊點，所以它必須跟展示框貼在一起（理由寫在 App.tsx 的註解）。
+   `contain: layout style` 而不是 `content`：裡面沒有需要裁切的溢出，
+   而 paint containment 對這一塊沒有收益 —— 它不像面板那樣每 250ms 全區重繪。 */
+.shell-cue {
+  contain: layout style;
+  margin: 0 0 var(--space-sm);
+  padding: var(--space-sm) 0;
+  border-top: var(--rule-hair) solid var(--color-ink);
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+}
+
 /* 節拍器與「已記錄 n / N」。這一段每 intervalMs 翻一次、每 250ms 跟著面板提交一次，
-   所以只有它吃 `contain: content`（含 paint）—— 裡面沒有可聚焦元素，裁不到焦點框。 */
+   所以只有它吃 `contain: content`（含 paint）—— 裡面沒有可聚焦元素，裁不到焦點框。
+
+   ⚠️ `min-height` 不是留白，是**版面鎖**。這一塊現在在展示框上方，而它的字串
+   會隨翻拍變長（「第 9 / 10 拍」→「第 10 / 10 拍」）；窄螢幕下換行數一變，
+   iframe 就被往下推 —— 那是待量的那一幀裡的版面工作。
+   4rem 讓一行與兩行佔同一個盒子（14px × 1.55 × 2 行 ≈ 43px，加上下內距）。
+   `align-items: center` 讓單行時垂直置中，看起來不像空了一截。 */
 .shell-pace {
   contain: content;
-  margin: var(--space-sm) 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-xs);
+  min-height: 4rem;
+  margin: var(--space-xs) 0 0;
   font-size: var(--text-sm);
+}
+
+/* 就地可修的宣告警示。與面板 `.rep-alert` 同一套：滿框、不用左側色條 */
+.shell-alert {
+  box-sizing: border-box;
+  max-width: var(--measure);
+  margin: var(--space-sm) 0 0;
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--rule-hair) solid var(--color-accent);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: var(--color-accent);
 }
 
 /* 記號翻面時不准推版：○ 與 ● 的字寬在部分字體裡不同，靠固定寬度的格子鎖住。

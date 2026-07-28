@@ -98,8 +98,21 @@ function nowEpoch(): number {
  * 有了這個參數，每一筆 B 類樣本都從一次全新的 measure.html 導覽開始，
  * 目標 mode 就是首載的那一份 document，前導成本歸零。
  */
+/**
+ * 沒帶參數時要開哪一個標本。
+ *
+ * **不是 `SPECIMENS[0]`** —— 那是 `00-calibration`，而校準件不是六個標本之一，
+ * 它是驗收工具（每個負載都有解析解可以反推，用來證明量測層本身沒說謊）。
+ * 首頁花了整頁講六個標本，點「進量測台 →」卻落在第七個沒有病理故事的頁面上。
+ *
+ * 靠 id 找、不動 `SPECIMENS` 的順序：校準件排第一是它在按鈕列的位置，
+ * 那個順序是量測工具與截圖都依賴的東西，不該為了預設值去動它。
+ * 找不到就退回 `SPECIMENS[0]`，因為「沒有標本可開」比「開錯標本」更糟。
+ */
+const DEFAULT_SPECIMEN_ID = '01-main-thread-block';
+
 function initialFromUrl(): { meta: SpecimenMeta; mode: string; cpu: CpuThrottle } {
-  const fallbackMeta = SPECIMENS[0];
+  const fallbackMeta = getSpecimen(DEFAULT_SPECIMEN_ID as SpecimenId) ?? SPECIMENS[0];
   const fallback = { meta: fallbackMeta, mode: firstMode(fallbackMeta), cpu: 'unknown' as CpuThrottle };
   if (typeof location === 'undefined') return fallback;
 
@@ -536,6 +549,17 @@ export function App() {
               className="shell-slot"
               onClick={() => switchSpecimen(s.id)}
               disabled={s.id === specimenId}
+              /*
+               * `disabled` 是「你正在看這個」的視覺表達（shell.css:266 的實墨框），
+               * 但 disabled 的語意是「壞掉／不可用」，而且不可聚焦 ——
+               * 鍵盤 Tab 會直接跳過目前這一顆，螢幕閱讀器只會唸到「按鈕，停用」。
+               * aria-current 補的就是那句沒被唸出來的「目前選取」。
+               *
+               * ⚠️ 只加屬性，不動 disabled：`tools/reproducibility.mjs` 的 ptShell()
+               * 與 acceptance.mjs 靠 textContent 找按鈕、靠 disabled 判斷是否已在該狀態，
+               * 拿掉 disabled 會同時改變兩支工具的點擊路徑。
+               */
+              aria-current={s.id === specimenId ? 'true' : undefined}
             >
               <span className="shell-slot__no">{s.id}</span>{' '}
               <span className="shell-slot__name">{s.title}</span>
@@ -575,6 +599,9 @@ export function App() {
                   className={`shell-mode__btn${lesion ? ' shell-mode__btn--lesion' : ''}`}
                   onClick={() => switchMode(m.id)}
                   disabled={m.id === mode}
+                  /* 與標本按鈕同一個理由：disabled 表達「目前這一個」，
+                     aria-current 才是把那件事說出口的屬性 */
+                  aria-current={m.id === mode ? 'true' : undefined}
                 >
                   {m.label}
                 </button>
@@ -601,41 +628,19 @@ export function App() {
             外框（.shell-frame）視窗變窄時橫向捲，**不縮 iframe**；左欄的 800px 也是硬值，
             CSS 那邊同樣不准出現 % / vw / transform: scale。
           */}
-          <div className="shell-frame">
-            <iframe
-              key={meta.id}
-              ref={iframeRef}
-              src={iframeSrc}
-              width={meta.viewport.width}
-              height={meta.viewport.height}
-              title={`${meta.id} 實驗區`}
-            />
-          </div>
-          <p className="shell-caption">
-            viewport{' '}
-            <span className="shell-mono">
-              {meta.viewport.width}×{meta.viewport.height}
-            </span>{' '}
-            · 尺寸凍結 —— CLS 與 LCP 都是 viewport 相對量，改它等於讓已登記的數字作廢
-          </p>
+          {/*
+            操作提示**必須在展示框正上方**。
+            舊版擺在框底下：1280 寬時 iframe 裡要點的按鈕在 y≈528、節拍器在 y≈1067，
+            相距 540px —— 而這個標本的整個前提是「照著拍子點十次」。
+            拍子與按鈕不可能同時進視野，等於要求操作者記著節奏去點另一個地方。
 
-          <section className="shell-block">
-            <h3 className="shell-h">操作程序（凍結變因，spec §5.1 第 4 項）</h3>
+            ⚠️ `.shell-pace` 鎖了 min-height（shell.css）：翻拍時字串長度會變
+            （「第 9 / 10 拍」→「第 10 / 10 拍」），窄螢幕下換行數一變就會把 iframe 往下推，
+            那是**待量的那一幀裡的版面工作**。鎖住高度之後，一行與兩行佔同一個盒子。
+          */}
+          <section className="shell-cue">
+            <h3 className="shell-h">操作程序</h3>
             <p className="shell-instruction">{meta.protocol.instruction}</p>
-            <p className="shell-note">
-              {/* intervalMs null 不一定是「盡快連續」：#5（idle）是「靜置三秒不要碰」、
-                  #6（stream）是「按一次然後放手」。這裡曾對兩者都印「盡快連續（不要等
-                  畫面回應）」—— 與 instruction 相反的指示，人手複驗會照著做錯事。
-                  「盡快連續」只對 click／scroll／type 的 null 成立（protocol.ts 的語意）。 */}
-              動作 {meta.protocol.action} · 次數 {meta.protocol.repetitions} · 間隔{' '}
-              {meta.protocol.intervalMs !== null
-                ? `${meta.protocol.intervalMs}ms`
-                : meta.protocol.action === 'idle'
-                  ? '—（零互動，沒有間隔可言）'
-                  : meta.protocol.action === 'stream'
-                    ? '—（單次觸發，之後由標本自行計時）'
-                    : '盡快連續（不要等畫面回應）'}
-            </p>
             <p className="shell-pace">
               {/* 機器節拍的標本不渲染節拍器：它的 setInterval + 每拍一次 setState
                   會落在待量的那一段裡，而標本 #1 的兇手段正是 presentation。
@@ -657,6 +662,43 @@ export function App() {
                     ? `已觸發 ${done} / ${meta.protocol.repetitions} 次 —— 量測窗這時才開始，由標本自行計時（外殼無從得知它何時結束）`
                     : `已記錄 ${done} / ${meta.protocol.repetitions} 次`}
               </span>
+            </p>
+          </section>
+
+          <div className="shell-frame">
+            <iframe
+              key={meta.id}
+              ref={iframeRef}
+              src={iframeSrc}
+              width={meta.viewport.width}
+              height={meta.viewport.height}
+              title={`${meta.id} 實驗區`}
+            />
+          </div>
+          <p className="shell-caption">
+            viewport{' '}
+            <span className="shell-mono">
+              {meta.viewport.width}×{meta.viewport.height}
+            </span>{' '}
+            · 尺寸凍結 —— CLS 與 LCP 都是 viewport 相對量，改它等於讓已登記的數字作廢。
+            視窗比 800px 窄時這個框**橫向可捲**，不縮 iframe（縮了數字就作廢）
+          </p>
+
+          <section className="shell-block">
+            <h3 className="shell-h">程序的凍結變因（spec §5.1 第 4 項）</h3>
+            <p className="shell-note">
+              {/* intervalMs null 不一定是「盡快連續」：#5（idle）是「靜置三秒不要碰」、
+                  #6（stream）是「按一次然後放手」。這裡曾對兩者都印「盡快連續（不要等
+                  畫面回應）」—— 與 instruction 相反的指示，人手複驗會照著做錯事。
+                  「盡快連續」只對 click／scroll／type 的 null 成立（protocol.ts 的語意）。 */}
+              動作 {meta.protocol.action} · 次數 {meta.protocol.repetitions} · 間隔{' '}
+              {meta.protocol.intervalMs !== null
+                ? `${meta.protocol.intervalMs}ms`
+                : meta.protocol.action === 'idle'
+                  ? '—（零互動，沒有間隔可言）'
+                  : meta.protocol.action === 'stream'
+                    ? '—（單次觸發，之後由標本自行計時）'
+                    : '盡快連續（不要等畫面回應）'}
             </p>
           </section>
 
@@ -683,6 +725,18 @@ export function App() {
                 重跑（把這一輪存進歷史，開新的一輪）
               </button>
             </div>
+            {/*
+              未宣告的警示過去只長在右欄的面板裡（Panel.tsx 的 Conditions）——
+              控制項在左欄底部、警示在右欄中段，看到警示的人要跨欄去找該按哪裡。
+              面板那一份留著（它是快照的一部分，截圖要看得到），這一份負責就地可修。
+            */}
+            {cpuThrottle === 'unknown' && (
+              <p className="shell-alert">
+                ⚠ 還沒宣告 —— JS 偵測不到 DevTools 的節流倍率，這一欄空著的話，
+                現在截圖之後沒有人知道它是幾倍速，等同作廢。DevTools → Performance →
+                齒輪 → CPU 選好之後，回上面那個下拉把它宣告一次。
+              </p>
+            )}
             <label className="shell-check">
               <input
                 type="checkbox"

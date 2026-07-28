@@ -26,9 +26,15 @@
     -->
   </head>
   <body>
-    <!-- 回首頁。刻意放在 #root 外面而且零樣式：它不進 React 樹、不參與任何重繪，
-         所以不會落進待量的那一段。改動之後 npm run acceptance 仍是 13 / 13。 -->
-    <a href="/">← 回標本館首頁</a>
+    <!-- 回首頁。刻意放在 #root 外面：它不進 React 樹、不參與任何重繪，
+         所以不會落進待量的那一段。改動之後 npm run acceptance 仍是 13 / 13。
+
+         2026-07-28：從「零樣式」改成有樣式。零樣式的代價是它以瀏覽器預設藍
+         底線連結出現在整站唯一沒排版的位置，而它是量測台的第一個像素 ——
+         看起來像壞掉，而且高 24px（點擊目標下限 44px）。
+         樣式掛在 shell.css 的 `.shell-home`，是靜態規則：套用一次於首次版面，
+         之後永不重算，所以「不落進待量的那一段」這個前提沒有被破壞。 -->
+    <a class="shell-home" href="/">← 回標本館首頁</a>
     <div id="root"></div>
     <script type="module" src="/src/shell/main.tsx"></script>
   </body>

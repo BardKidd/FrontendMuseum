@@ -10,7 +10,9 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "measure": "npm run build && npm run preview",
-    "build:reports": "node tools/build-reports.mjs"
+    "build:reports": "node tools/build-reports.mjs",
+    "build:articles": "node tools/build-articles.mjs",
+    "build:docs": "npm run build:reports && npm run build:articles"
   },
   "dependencies": {
     "react": "^19.2.8",

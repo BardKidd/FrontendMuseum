@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>修掉實驗設計再量一次，八格判決翻了六格 · 前端效能病理標本館</title>
+<style>
+  :root {
+    --paper:   oklch(97%   0.008 80);
+    --paper2:  oklch(94.5% 0.011 78);
+    --rule:    oklch(84%   0.010 70);
+    --rule2:   oklch(90%   0.008 74);
+    --neutral: oklch(58%   0.009 60);
+    --muted:   oklch(43%   0.009 55);
+    --ink:     oklch(21%   0.011 45);
+    --accent:  oklch(45%   0.145 28);
+    --focus:   oklch(52%   0.170 28);
+    --serif: ui-serif, "Noto Serif CJK TC", "Noto Serif TC", Georgia, serif;
+    --sans:  ui-sans-serif, system-ui, "Noto Sans CJK TC", sans-serif;
+    --mono:  ui-monospace, "Noto Sans Mono CJK TC", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); line-height: 1.75; font-size: 1rem;
+    -webkit-text-size-adjust: 100%;
+  }
+  .page { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+  .mast { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.05em;
+    color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem;
+    justify-content: space-between; }
+  .mast a { display: inline-flex; align-items: center; min-height: 44px;
+    color: var(--accent); white-space: nowrap; text-underline-offset: 0.2em; }
+  .mast a:hover { color: var(--focus); }
+  /* 目前所在的區塊：不是靠顏色一種訊號，加一條底線與實墨字色 ——
+     「不准只用顏色表達狀態」是 WCAG 的要求，不是偏好 */
+  .mast a[aria-current] { color: var(--ink); text-decoration: none;
+    border-bottom: 2px solid var(--accent); }
+  .rule  { border: 0; border-top: 3px solid var(--ink);  margin: 0.5rem 0 0; }
+  .rule2 { border: 0; border-top: 1px solid var(--rule); margin: 4px 0 2rem; }
+  h1 { font-family: var(--serif); font-size: 1.9rem; line-height: 1.3; margin: 0 0 1rem; }
+  /* 一份報告一萬多像素高，節與節的邊界必須用掃的就看得到 ——
+     舊版七節全是 h4（1rem，跟內文同級），結構等於不存在。
+     h2 是**唯一**的分節層級：實墨橫線 + 1.5rem，配上頁首目錄就能跳。 */
+  h2 { font-family: var(--serif); font-size: 1.5rem; line-height: 1.35; font-weight: 600;
+    margin: 3rem 0 0.75rem; padding-top: 1.25rem; border-top: 2px solid var(--ink);
+    scroll-margin-top: 1rem; }
+  h3 { font-family: var(--serif); font-size: 1.15rem; margin: 2rem 0 0.5rem;
+    scroll-margin-top: 1rem; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
+
+  /* 頁首目錄。零 JS、零 hover-only 資訊 —— 目錄本身就是可見的導覽，
+     所以標題不再另外掛「滑過才出現的錨點連結」。 */
+  .toc { margin: 0 0 1rem; padding: 0.75rem 0 0; border-top: 1px solid var(--rule); }
+  .toc b { display: block; font-family: var(--mono); font-size: 0.8rem;
+    letter-spacing: 0.05em; color: var(--muted); font-weight: 500; }
+  .toc ol { list-style: none; padding: 0; margin: 0.25rem 0 0; counter-reset: toc;
+    display: flex; flex-wrap: wrap; gap: 0 1.5rem; }
+  .toc li { margin: 0; counter-increment: toc; }
+  /* 可點擊文字不准斷成兩行；44px 靠 inline-flex 撐，不用 padding-block。
+     底線走 text-decoration 而不是 border-bottom —— 後者會畫在 44px 盒子的底緣，
+     離文字十幾像素，看起來不像「這幾個字的底線」。 */
+  .toc a { display: inline-flex; align-items: center; min-height: 44px;
+    white-space: nowrap; text-decoration: underline;
+    text-decoration-color: var(--rule); text-decoration-thickness: 1px;
+    text-underline-offset: 0.25em; }
+  .toc a::before { content: counter(toc) " "; font-family: var(--mono);
+    font-size: 0.8em; color: var(--neutral); margin-right: 0.4em;
+    text-decoration: none; }
+  /* hover 只做顏色，不疊第二種效果 */
+  .toc a:hover { color: var(--focus); text-decoration-color: var(--accent); }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+  p { margin: 0.75rem 0; }
+  a { color: var(--accent); }
+  a:hover { color: var(--focus); }
+  /* 側邊色條（border-left 當裝飾）是模板味最重的一招，換成滿框 + 底色。
+     引言在這個站承載的是「出處與條件」，它該讀起來像一張夾進來的標籤，不像警告條。 */
+  blockquote { margin: 1.25rem 0; padding: 0.75rem 1rem;
+    border: 1px solid var(--rule); background: var(--paper2);
+    color: var(--muted); }
+  blockquote p { margin: 0.5rem 0; }
+  blockquote :first-child { margin-top: 0; }
+  blockquote :last-child { margin-bottom: 0; }
+  code { font-family: var(--mono); font-size: 0.875em;
+    background: var(--paper2); padding: 0.1em 0.35em; border-radius: 3px;
+    overflow-wrap: anywhere; }
+  pre { background: var(--paper2); border: 1px solid var(--rule2);
+    padding: 0.75rem 1rem; overflow-x: auto; line-height: 1.6; }
+  pre code { background: none; padding: 0; overflow-wrap: normal; }
+  h1, h2, h3, h4, p, li { overflow-wrap: anywhere; min-width: 0; }
+  .rlist { list-style: none; padding: 0; }
+  .rlist li { margin: 0 0 1.25rem; padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--rule2); }
+  .rlist li:last-child { border-bottom: 0; }
+  .rlist a { display: inline-flex; align-items: center; min-height: 44px;
+    font-family: var(--serif); font-size: 1.15rem; }
+  .rlist p { margin: 0; font-size: 0.9rem; color: var(--muted); }
+  .tw { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; font-size: 0.9rem; min-width: 100%; }
+  th, td { text-align: left; padding: 0.45rem 0.75rem; vertical-align: top;
+    border-bottom: 1px solid var(--rule2); }
+  th { font-family: var(--mono); font-weight: 600; font-size: 0.8rem;
+    letter-spacing: 0.04em; color: var(--muted);
+    border-bottom: 2px solid var(--rule); white-space: nowrap; }
+  ul, ol { padding-left: 1.5rem; }
+  li { margin: 0.35rem 0; }
+  strong { font-weight: 650; }
+  .foot { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 0.8rem; color: var(--neutral); }
+  .foot a { white-space: nowrap; display: inline-flex; min-height: 44px;
+    align-items: center; margin-right: 1.25rem; }
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="mast" aria-label="站內">
+  <a href="/">← 標本索引</a>
+  <a href="/reports/">病理報告</a>
+  <a href="/articles/" aria-current="page">文章</a>
+  <a href="/measure.html">量測台 →</a>
+</nav>
+<hr class="rule"><hr class="rule2">
+<h1>修掉實驗設計再量一次，八格判決翻了六格</h1>
+<nav class="toc" aria-label="本頁章節">
+  <b>本頁章節</b>
+  <ol>
+    <li><a href="#一拿掉混淆變因療效不會一律縮水">一、拿掉混淆變因</a></li>
+    <li><a href="#二歸零的那一段把變因隔離之後passive-什麼也沒買到">二、歸零的那一段</a></li>
+    <li><a href="#三從無到有閘門先前一次都沒觸發過">三、從無到有</a></li>
+    <li><a href="#四變大的那兩段">四、變大的那兩段</a></li>
+    <li><a href="#五儀器不是只會高估它把-23-倍壓成了-2-倍">五、儀器不是只會高估</a></li>
+    <li><a href="#六沒翻的那一段進了作用區間還是零效果">六、沒翻的那一段</a></li>
+    <li><a href="#七這一輪新學到的比值是機器速度的函數">七、這一輪新學到的</a></li>
+    <li><a href="#八判準也補了一條但它蓋不到四個標本">八、判準也補了一條</a></li>
+    <li><a href="#九所以呢">九、所以呢</a></li>
+    <li><a href="#附錄這篇文章沒有做到的事">附錄：這篇文章沒有做到的事</a></li>
+  </ol>
+</nav>
+<blockquote>
+<p>前端效能病理標本館 · 第二篇
+全部數字：宣告 4x CPU throttle、CDP 機器驅動、每個 mode 三輪。
+原始資料 <code>docs/measurements/2026-07-26-reproducibility-4x-5.json</code>（66 筆），可自行覆算。
+<strong>本文所有比值都取自這一份 JSON 內部</strong> —— 跨檔案的絕對值不可比，理由寫在第七節。</p>
+</blockquote>
+<p>第一篇《十二段治療處方，站得住的有四段》的結論是：12 段治療裡，效果既乾淨又可歸因的只有 4 段，
+其餘 8 段各有各的毛病 —— 有的同時翻了兩個變因，有的從未進入作用區間，有的那段程式碼根本沒執行過。</p>
+<p>那篇文章的最後一句是：「上述缺陷全部尚未修正。先發表判決，再修 ——
+反過來做的話，就沒有人能檢查我是不是把結論改成了跟修完的程式一致。」</p>
+<p>現在修完了，也重量了。這篇文章講那八格。</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>第一篇的判決</th>
+<th>修完之後</th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>#4 <code>passive</code> 同時翻了兩個變因（43 → 27，0.63×）</td>
+<td>隔離之後 <strong>113 → 112，1.0×</strong></td>
+<td>翻</td>
+</tr>
+<tr>
+<td>#4 rAF 節流從未進入作用區間</td>
+<td>閘門真的觸發了，<strong>113 → 42，2.7×</strong></td>
+<td>翻</td>
+</tr>
+<tr>
+<td>#6 背壓那段程式從未執行</td>
+<td><code>rendersSkipped</code> 0 → <strong>137/144/142</strong>，277 → 136</td>
+<td>翻</td>
+</tr>
+<tr>
+<td>#5 治的是不存在的病</td>
+<td>三個位移源都真了，CLS 可乾淨拆解</td>
+<td>翻</td>
+</tr>
+<tr>
+<td>#1 <code>scheduler.yield</code> 只做了十分之一的工作</td>
+<td>工作量對齊之後，<strong>17× 變成 32×</strong></td>
+<td>翻</td>
+</tr>
+<tr>
+<td>#2 虛擬滾動「只有這一臂被儀器加了負載」</td>
+<td><strong>2.0× 變成 23.3×</strong>，而加負載的不是那一臂</td>
+<td>翻</td>
+</tr>
+<tr>
+<td>#6 批次化從未進入作用區間（1.04×）</td>
+<td>進去了，<strong>277 → 234，1.2×</strong></td>
+<td>沒翻</td>
+</tr>
+<tr>
+<td>#1 Web Worker「搬運比排序貴 20 倍」</td>
+<td>剩 2.3 倍，但該臂本輪判不可重現</td>
+<td>部分</td>
+</tr>
+</tbody></table></div>
+<p>六格翻案。但真正值得寫的不是「翻了幾格」，是<strong>它們往四個不同的方向翻</strong>。</p>
+<hr>
+<h2 id="一拿掉混淆變因療效不會一律縮水">一、拿掉混淆變因，療效不會一律縮水</h2>
+<p>直覺會說：修掉實驗設計的漏洞，治療的效果應該往下修 —— 因為那些漏洞本來就是在幫治療臂作弊。</p>
+<p>實測是四個方向都有：</p>
+<pre><code>歸零      #4 passive       0.63×  →  1.0×      隔離之後療效完全消失
+從無到有  #4 rAF 節流      沒發生 →  2.7×      閘門先前一次都沒觸發
+變大      #1 scheduler.yield  17×  →  32×      混淆變因移除，效果反而更大
+沒動      #6 批次化        1.04×  →  1.2×      進了作用區間，還是零效果
+</code></pre>
+<p>四種都能用護欄計數器交叉證實。以下逐段。</p>
+<hr>
+<h2 id="二歸零的那一段把變因隔離之後passive-什麼也沒買到">二、歸零的那一段：把變因隔離之後，<code>passive</code> 什麼也沒買到</h2>
+<p>第一篇指出標本 #4 的治療一宣稱「<strong>只</strong>把 wheel 改成 <code>passive: true</code>」，
+但程式在換旗標的同時把 handler 也換掉了，順手拿掉一整輪 8000 次 <code>getBoundingClientRect()</code>。
+<code>rectReads</code> 從 168,000 砍到 88,000，剛好對半。</p>
+<p>修法是讓兩臂共用同一個 handler 識別字，只翻旗標。現在：</p>
+<pre><code>                 passes          rectReads              wheelCancelable   掉幀峰值
+broken           41 / 40 / 38    328k / 320k / 304k     21 / 20 / 20      119 / 113 /  99
+fixed-passive    40 / 41 / 41    320k / 328k / 328k      0 /  0 /  0      116 / 112 / 105
+</code></pre>
+<p><code>passes</code> 與 <code>rectReads</code> 兩欄現在對齊了 —— 兩臂做的是同一份工作。
+<code>wheelCancelableCount</code> 從 21 掉到 0，證明旗標<strong>確實生效</strong>。</p>
+<p>而掉幀峰值 113 → 112，<strong>1.0×</strong>。</p>
+<p>第一篇量到 0.63× 的那個「改善」，整份都是「少做一次全掃」，不是 <code>passive</code> 買來的。
+把工作量對齊之後，殘差是零。</p>
+<p>⚠️ 但這句話有一個必須寫出來的邊界：<strong>這把尺量不到 <code>passive</code> 真正買到的東西。</strong>
+<code>droppedFrames</code> 來自主執行緒的 rAF 迴圈，量的是主執行緒的出幀節奏；
+而 <code>passive</code> 買到的是 compositor 側「不必等你的 handler 就能先捲」。
+所以「量到一個零」是<strong>這把尺的解析度邊界的結論</strong>，不是「<code>passive</code> 沒用」的一般結論。
+要量它得換一把尺，這一輪沒做。</p>
+<hr>
+<h2 id="三從無到有閘門先前一次都沒觸發過">三、從無到有：閘門先前一次都沒觸發過</h2>
+<p>同一支標本的治療二是 rAF 節流。第一篇的證據是 <code>fixed-raf</code> 與 <code>fixed-passive</code> 的
+<code>passes</code> 與 <code>rectReads</code> <strong>逐輪一模一樣</strong> —— 合併閘門一次都沒觸發，因為量測驅動器
+每 500ms 才派一次滾輪事件，一幀之內永遠不會有第二個 scroll 可以合併。</p>
+<p>修法是一拍連派三格滾輪（不等中間任何一次的回應，否則三格會落在三個不同的幀）。現在：</p>
+<pre><code>                 rafSkipped      passes          rectReads
+fixed-passive     0 /  0 /  0    40 / 41 / 41    320k / 328k / 328k
+fixed-raf        20 / 20 / 22    14 / 14 / 14    112k / 112k / 112k
+</code></pre>
+<p><code>rafSkipped</code> 從恆為 0 變成 20~22 —— 閘門真的在合併了。
+<code>passes</code> 從 40 掉到 14、<code>rectReads</code> 從 320k 掉到 112k。</p>
+<p>掉幀峰值 113 → 42，<strong>2.7×</strong>。</p>
+<p>這一段從「未進入作用區間」變成一個真實的、可歸因的效果。
+<strong>而它之所以先前不成立，責任在量測驅動器，不在治療。</strong></p>
+<p>標本 #6 的背壓臂是同一種翻案：判斷式建立在一個低估 7.5 倍的自報值上，
+於是 <code>Math.max(0, 負數)</code> 恆等於 0，閘門永遠不觸發。改用真實幀成本之後：</p>
+<pre><code>                       rendersSkipped     batchesRendered    掉幀峰值
+fixed-backpressure     137 / 144 / 142    26 / 26 / 26       137 / 135 / 136
+</code></pre>
+<p><code>rendersSkipped</code> 從三輪恆為 0 變成 137~144。那段程式碼活了，277 → 136，<strong>2.0×</strong>。</p>
+<hr>
+<h2 id="四變大的那兩段">四、變大的那兩段</h2>
+<h3>4-1　工作量對齊之後，<code>scheduler.yield</code> 從 17× 變成 32×</h3>
+<p>第一篇最重的一節是「17 倍裡有多少是少做了九成的事」：病變版做完十次排序，
+兩段治療各只做完一次、取消九次。那不是作弊 —— 非同步實作本來就該取消被後續操作蓋掉的工作 ——
+但它意味著 17× 不是同一份工作量的對照。</p>
+<p>修法是讓治療臂改成<strong>排隊</strong>而不是取消，並把點擊節拍從「盡快連續」改成 17ms 絕對排程。現在：</p>
+<pre><code>                completedSorts    cancelledSorts
+broken            10 / 10 / 10      0 / 0 / 0
+fixed-yield       10 / 10 / 10      0 / 0 / 0
+fixed-worker      10 / 10 / 10      0 / 0 / 0
+</code></pre>
+<p><strong>三臂都做完十次，一次都沒取消。</strong> 同一份工作量的對照終於成立。</p>
+<p>而 INP median 896 → 28ms，<strong>32.0×</strong>。比第一篇那個「含混淆變因」的 17× 還大。</p>
+<p>這件事值得停一下：混淆變因往哪個方向偏，<strong>不能用直覺猜</strong>。
+第一篇已經抓到標本自己的註解把方向記反了一次（宣稱偏向對治療不利，實測是相反）；
+這一輪則是移除混淆變因之後效果變大 —— 也就是那個混淆變因其實在<strong>壓低</strong>療效。</p>
+<h3>4-2　虛擬滾動從 2.0× 變成 23.3×</h3>
+<p>這一格單獨一節，因為它的原因跟其他七格都不同。見第五節。</p>
+<hr>
+<h2 id="五儀器不是只會高估它把-23-倍壓成了-2-倍">五、儀器不是只會高估，它把 23 倍壓成了 2 倍</h2>
+<p>第一篇給標本 #2 的虛擬滾動臂一個保留意見：「只有這一臂被儀器加了負載」，LCP 1360 → 680ms，2.0×。</p>
+<p>保留意見是對的，但<strong>指錯了方向</strong>。加負載的不是那一臂，是量它的方法。</p>
+<p>標本 #2 是 B 類：切換 mode 要重載整份 document，因為 LCP 在第一次互動後定案、
+而且是 per-document 的。實作方式是按面板上的按鈕，讓外殼把 iframe 重新導覽。</p>
+<p>問題在於 <strong>iframe 與外殼共用同一條 renderer 主執行緒</strong>。
+前一份 document 的拆除與殘留工作落在<strong>新 document 的時鐘之內</strong>，
+而 LCP 取的是 <code>entry.startTime</code>，以新 document 的 timeOrigin 起算。
+於是 LCP 帶著一個由「前導 mode 有多重」決定的加項。</p>
+<p>同一個 mode，同一組凍結條件，只改前面那一個 mode：</p>
+<pre><code>fixed-virtual，前導是 broken                    LCP 172 ~ 180ms
+fixed-virtual，前導是 fixed-content-visibility  LCP 888 ~ 892ms
+</code></pre>
+<p>零重疊，差 5 倍。差距<strong>全部</strong>落在新 document 的 <code>responseEnd → DCL</code> 之間
+（<code>responseEnd</code> 一律 13~262ms，不是抓取問題），切換前插 15 秒靜置排不掉。</p>
+<p>最刺眼的一組對照是這個：</p>
+<pre><code>fixed-content-visibility   40,021 個節點   DCL   819 / 1,081 / 1,392 / 1,626 / 1,692 / 1,907 ms
+fixed-virtual                 141 個節點   DCL 8,527 / 8,866 / 9,553 ms
+</code></pre>
+<p>（同一支探針、同一輪、cv 與 virtual 交替各跑六次與三次；上面兩列都是切換前不插靜置的那一組，
+沒有挑樣本。virtual 另有三筆插了 15 秒靜置的，1,651 / 7,586 / 12,082ms —— 靜置排不掉，
+只是多了一個離群值。）</p>
+<p><strong>141 個節點的 document 載入耗時是 40,021 個節點那份的五倍。</strong>
+這個數字結構上不可能在描述標本。</p>
+<p>修法是給外殼加 deep-link（<code>?specimen=&amp;mode=&amp;cpu=</code>），
+讓每一筆 B 類樣本都從一次全新的導覽開始，目標 mode 就是首載的那一份 document，前導成本歸零。
+修完：</p>
+<pre><code>fixed-virtual  deep-link 全新導覽   LCP 100 / 92 / 108ms   全距 16（雜訊底線 50）
+</code></pre>
+<p>正式三輪之後，標本 #2 的三臂：</p>
+<pre><code>broken                     1864 / 1788 / 1896 ms   離散度  5.8%   ✅
+fixed-content-visibility    472 /  548 /  520 ms   離散度 14.6%   ✅
+fixed-virtual                84 /   76 /   80 ms   離散度 10.0%   ✅
+
+病變 → content-visibility    3.6×
+病變 → 虛擬滾動             23.3×
+</code></pre>
+<p>第一篇寫的是 2.0×。<strong>真實答案是 23.3×。</strong></p>
+<p>污染項有多大，要在<strong>同一輪之內</strong>回答才算數（跨 session 的絕對值不可比，見第七節）。
+上面那支探針同一輪裡量到：前導是 cv 時 888~892ms，deep-link 全新導覽時 100/92/108ms
+—— <strong>同一個 mode、同一組條件，污染項約 790ms，是訊號的八倍。</strong></p>
+<h3>這個缺陷最惡劣的地方</h3>
+<p>它<strong>沒有症狀</strong>，而且它讓數字看起來更漂亮。</p>
+<p>舊的量測順序是 <code>for 每一輪 { for 每一個 mode }</code> —— 每個 mode 每輪都佔同一個順位，
+於是它的前導<strong>永遠是同一個 mode</strong>。污染因此是一個常數。
+常數不會製造離散度：第一篇那一輪標本 #2 的三臂離散度是 2.9% / 6.1% / 8.2%，
+是全站最漂亮的數字之一。</p>
+<p><strong>污染安安靜靜地烙進臂間比值裡，而可重現性判準對它一無所知。</strong></p>
+<p>後來把量測順序改成每輪輪轉一格，#2 立刻判不可重現（離散度 34.0% / 110.7%）。
+當時的直覺是「這一支標本壞了」—— 而它一個字都沒改。
+掀開的不是病，是掩蓋。</p>
+<p>順帶一提，那個輪轉本身也有缺陷：守衛條件 <code>if (order[0].id === current)</code> 在第一輪必定成立
+（<code>current</code> 的初值就是 <code>modes[0].id</code>），把第一輪推成 <code>rot(1)</code>，而第二輪算出來也是 <code>rot(1)</code>。
+三輪只有兩種順序。註解宣稱「每一輪輪轉一格」，程式做的是「兩輪相同 + 一輪輪轉」。</p>
+<p>現在有一條回歸測試（<code>tools/b-class-isolation.mjs</code>）守著這件事：
+同一個 mode 量三次，全距必須落在雜訊底線內；舊的量法留在測試裡當對照組，不參與判定。</p>
+<hr>
+<h2 id="六沒翻的那一段進了作用區間還是零效果">六、沒翻的那一段：進了作用區間，還是零效果</h2>
+<p>標本 #6 的治療一是「批次化 + rAF」。第一篇量到 1.04×，並判定它「從未進入作用區間」：
+推送源是 <code>setInterval(50ms)</code>，一幀之內平均只有 0.33 筆推送，沒有東西可以合併。</p>
+<p>修法是把推送間隔改成 25ms。現在：</p>
+<pre><code>                 batchesReceived    batchesRendered    renderRatio    掉幀峰值
+broken           201 / 202 / 201    201 / 202 / 201    1.00           281 / 277 / 275
+fixed-batch      206 / 201 / 203     42 /  41 /  42    0.21           234 / 238 / 232
+</code></pre>
+<p><code>renderRatio</code> 從 1.0 掉到 0.21 —— <strong>批次化確實在合併了，五筆推送才渲染一次。</strong></p>
+<p>掉幀峰值 277 → 234，<strong>1.2×</strong>。</p>
+<p><strong>機制生效，收益接近零。</strong> 這比第一篇那個「未進入作用區間」更值得寫，
+因為它排除了「只是負載不夠」這個解釋：合併真的發生了，渲染次數少了五倍，而幀還是掉。</p>
+<p>原因在補充指標上：</p>
+<pre><code>                 有渲染的幀距 median
+broken           200.1 / 208.3 / 200.0 ms
+fixed-batch      100.1 / 116.6 / 116.6 ms
+fixed-granular    16.7 /  16.7 /  16.7 ms
+</code></pre>
+<p>批次化把幀距從 200ms 砍到 100ms，<strong>但它仍然在整表重建</strong> —— 每一次渲染還是那麼貴，
+只是次數少了。而 5 秒窗的掉幀數對「一幀 100ms」和「一幀 200ms」都一樣是災難。
+真正把幀距壓回 16.7ms 的是細粒度更新（只改變動的節點），277 → 18，<strong>15.4×</strong>。</p>
+<p><strong>批次化的收益不在「少渲染幾次」，而在「每次渲染有沒有變便宜」—— 它一點都沒變便宜。</strong></p>
+<hr>
+<h2 id="七這一輪新學到的比值是機器速度的函數">七、這一輪新學到的：比值是機器速度的函數</h2>
+<p>第一篇登記過「跨 session 的絕對值不可比」。這一輪發現那條還不夠強。</p>
+<p>同一天、同一台機器、相隔約六小時的兩次完整掃描。標本 #6 的細粒度臂：</p>
+<pre><code>                     上午                本輪
+batchesReceived      200 / 200 / 200     200 / 200 / 200
+updatesApplied       ~18.6k              ~18.8k
+有渲染的幀距 median  16.7 ×3             16.7 ×3
+掉幀峰值             85 / 59 / 84        14 / 18 / 18     ← 差 4~5 倍
+</code></pre>
+<p>工作量一格沒動、幀距一模一樣，掉幀差 4~5 倍。同一輪裡病變臂則幾乎不動
+（281/284/277 → 281/277/275）。</p>
+<p>原因是機器：本輪的機器比上午快且穩得多（標本 #1 的排序耗時從 132/143/180ms 變成
+110.7/111.6/113.9ms，輪內抖動從 36% 降到 3%）。</p>
+<p><strong>病變臂飽和了，所以對機器速度不敏感；治療臂沒飽和，所以敏感。</strong>
+於是比值本身是機器速度的函數。3.3× 與 15.4× 都是真的，差別在機器。</p>
+<p><strong>跨 session 比較治療臂的比值，是無效的。</strong> 這比「絕對值不可比」更強一級。</p>
+<p>同一件事還讓標本 #1 的兇手翻面。上午三輪一致是 <code>presentation</code>；本輪是
+<code>presentation / inputDelay / inputDelay</code>：</p>
+<pre><code>             上午                        本輪
+inputDelay    3.9 /  0.6 /  0.4 ms      0.8 / 798.5 / 700.9 ms
+presentation 1373 / 1422 / 1585 ms      951 / 120.2 / 238.6 ms
+</code></pre>
+<p>機制是第一篇就登記過的那條：<strong>INP 看不看得見排隊，不取決於有沒有排隊，
+取決於排隊期間瀏覽器有沒有機會畫。</strong> 機器變快之後，十次排隊的點擊中間開始塞得進一次 paint，
+排隊就從 <code>presentation</code> 浮出來、變成 <code>inputDelay</code>。這支標本正好卡在那條界線上。</p>
+<p><strong>這代表標本 #1 的兇手歸因是機器速度的函數。</strong> 而它現在登記的 <code>presentation</code>
+是上午（較慢的機器）量出來之後改的。依本站規矩，不在這裡改登記 —— 留待下一輪裁決。</p>
+<hr>
+<h2 id="八判準也補了一條但它蓋不到四個標本">八、判準也補了一條，但它蓋不到四個標本</h2>
+<p>第一篇之後留下一個漏洞：「三輪兇手一致」這條判準只檢查三輪彼此一致，
+<strong>不檢查是否等於當初登記的兇手</strong>。也就是「登記的預期整個錯了」這件事，判準看不見。</p>
+<p>現在補上了，六種狀態分開：三輪一致且等於登記值 / 三輪一致但不等於登記值（新警示）/
+三輪不一致 / 沒有登記值（治療臂）/ 登記值不在 INP 三段值域 / 該輪沒有樣本。
+只比對病變臂 —— 治療臂換兇手正是治療本身，比對會誤報。</p>
+<p><strong>但它的覆蓋範圍只有六個標本裡的兩個。</strong>
+登記兇手是 <code>lcp</code>（#2）、<code>loaf</code>（#4 #6）、<code>cls</code>（#5）的那四支，
+一律判「不在 INP 三段值域」，不報警。</p>
+<p><strong>這四支標本登記的兇手，到今天為止沒有被任何判準驗證過。</strong> 照實記在待裁決清單裡。</p>
+<hr>
+<h2 id="九所以呢">九、所以呢</h2>
+<p>八格翻了六格，而它們往四個方向翻。如果要從這一輪取一句話：</p>
+<p><strong>修掉實驗設計的漏洞，療效不會一律往下修。</strong></p>
+<p><code>passive</code> 歸零、rAF 從無到有、<code>scheduler.yield</code> 從 17 倍變 32 倍、虛擬滾動從 2 倍變 23 倍。
+往下、往上、從零開始、原地不動 —— 四個方向都出現了。
+「混淆變因一定在幫治療臂作弊」是一個直覺，而這一輪有兩格是反過來的。</p>
+<p>第二件事，比第一件更重要：</p>
+<p><strong>最大的一格誤差不是標本產生的，是量測方法產生的，而且它讓數字更漂亮。</strong></p>
+<p>虛擬滾動的真實效果是 23.3×，發表出去的是 2.0×。中間那 590ms 是前一個 mode 的殘留，
+而它之所以沒被抓到，正是因為它是個<strong>常數</strong> —— 三輪離散度 2.9%，全站最漂亮的數字之一。</p>
+<p>可重現性判準只看「三輪之間一不一致」。一個穩定的錯誤，它抓不到。</p>
+<p>第一篇的結論是「主指標告訴你快了多少，護欄計數器告訴你這個數字能不能拿來說話」。
+這一篇要加一句：<strong>護欄計數器只保護標本，不保護量測順序。</strong>
+要抓住量測順序的偏差，得有一條會直接問「同一個 mode 量兩次，數字一樣嗎」的測試。
+那條測試現在存在了，而它本來應該從第一天就存在。</p>
+<hr>
+<h2 id="附錄這篇文章沒有做到的事">附錄：這篇文章沒有做到的事</h2>
+<ul>
+<li><strong>全部數字仍是 CDP 機器驅動</strong>，不是人手。標本 #1 的結論明確受此影響，人手複驗仍未做。</li>
+<li><strong>只跑三輪。</strong> 三輪足以抓到本文所有結論，但不足以估計分佈。</li>
+<li><strong>標本 #1 的 <code>fixed-worker</code> 本輪判不可重現</strong>（離散度 34.5%），該臂的 1.9× 不列為結論。
+它的內部欄位（序列化 52<del>59ms、排序 32ms、搬運 72</del>77ms）顯示「搬運比排序貴」的方向仍然成立，
+但第一篇寫的「貴 20 倍」是那一輪的數字，本輪是約 2.3 倍。<strong>兩輪的絕對值不可比</strong>，
+而該臂本輪不可重現 —— 所以這一格只能寫成「方向成立、量級待定」。</li>
+<li><strong>標本 #4 的 <code>fixed-observer</code> 本輪判不可重現</strong>（離散度 54.5%，全距 6 幀、底線 5 幀）。
+它是擦線，而擦線就是不過。10.3× 不列為結論。</li>
+<li><strong><code>passive</code> 那一格量到的零是儀器解析度的邊界</strong>，不是一般結論。要量 compositor 側
+買到的東西得換一把尺，這一輪沒做。</li>
+<li><strong><code>docs/open-questions.md</code> 裡有 29 條登記檔與程式、與彼此之間的不一致還沒裁決。</strong>
+其中兩條會影響本文引用的標本：標本 #6 的量測窗登記 10 秒而程式是 5 秒；
+標本 #2 登記了一個現行 protocol 結構上量不到的指標。兩條都不改變本文的結論方向。</li>
+<li><strong>第一篇不改。</strong> 它是有日期、附原始資料連結的第一輪快照，而且它講的正是本輪修掉的這些缺陷。
+本輪讓它多處數字失效，逐項列在 <code>docs/phase2-expected-results.md</code> 的作廢清單裡。</li>
+</ul>
+
+<footer class="foot">
+  <p>已發出的文章不回頭改數字 —— 這是有日期、附原始資料連結的快照，
+  後續發現問題就寫下一篇，不是改上一篇。原始資料在
+  <a href="https://github.com/BardKidd/FrontendMuseum">GitHub repo</a> 的
+  <code>docs/measurements/</code>，可自行覆算。</p>
+  <p><a href="/">← 標本索引</a> <a href="/articles/">文章目錄</a> <a href="/reports/">病理報告</a> <a href="/measure.html">量測台 →</a></p>
+</footer>
+</div>
+</body>
+</html>

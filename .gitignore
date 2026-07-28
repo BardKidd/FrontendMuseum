@@ -6,3 +6,6 @@ dist/
 .claude
 .shared
 .superpowers/
+
+# impeccable 的 critique 快照（工具狀態，不是產出物；結論寫在 docs/HANDOFF.md）
+.impeccable/

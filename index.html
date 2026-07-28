@@ -279,6 +279,8 @@ table.sheet caption { text-align: start; color: var(--color-muted); font-size: v
   font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-accent);
   border-bottom: none; white-space: nowrap; }
 .sheet .name .rep:hover { color: var(--color-focus); }
+/* 同一格裡的第二個小連結（量測台 deep-link）。間距走具名尺標，不臨時填數字 */
+.sheet .name .rep + .rep { margin-inline-start: var(--space-md); }
 .sheet .name small { display: block; font-family: var(--font-body); font-size: var(--text-xs);
                      font-weight: 400; color: var(--color-muted); margin-top: var(--space-3xs); }
 .sheet .val { font-family: var(--font-mono); white-space: nowrap; }
@@ -338,9 +340,9 @@ table.sheet caption { text-align: start; color: var(--color-muted); font-size: v
   <nav class="mast-nav" aria-label="主要">
     <ul>
       <li><a href="#index">標本索引</a></li>
-      <li><a href="#method">方法</a></li>
+      <li><a href="/articles/">文章</a></li>
+      <li><a href="/reports/">病理報告</a></li>
       <li><a href="#caveats">不能用的數字</a></li>
-      <li><a href="#throttle">CPU throttle</a></li>
       <li><a href="/measure.html">進量測台</a></li>
     </ul>
   </nav>
@@ -427,7 +429,8 @@ table.sheet caption { text-align: start; color: var(--color-muted); font-size: v
           <td class="no">01</td>
           <td class="name"><a href="/specimens/01-main-thread-block.html">主執行緒阻塞</a>
             <small>在事件處理器裡同步排序五萬筆訂單</small>
-            <a class="rep" href="/reports/01-main-thread-block.html">病理報告 →</a></td>
+            <a class="rep" href="/reports/01-main-thread-block.html">病理報告 →</a>
+            <a class="rep" href="/measure.html?specimen=01-main-thread-block">量測台 →</a></td>
           <td>INP median</td>
           <td class="val">952 → 24 ms</td>
           <td class="ratio">39.7×</td>
@@ -437,7 +440,8 @@ table.sheet caption { text-align: start; color: var(--color-muted); font-size: v
           <td class="no">02</td>
           <td class="name"><a href="/specimens/02-long-list.html">長列表未虛擬化</a>
             <small>一次渲染 5000 筆，約 40,000 個 DOM 節點</small>
-            <a class="rep" href="/reports/02-long-list.html">病理報告 →</a></td>
+            <a class="rep" href="/reports/02-long-list.html">病理報告 →</a>
+            <a class="rep" href="/measure.html?specimen=02-long-list">量測台 →</a></td>
           <td>LCP</td>
           <td class="val">2012 → 100 ms</td>
           <td class="ratio">20.1×</td>
@@ -447,7 +451,8 @@ table.sheet caption { text-align: start; color: var(--color-muted); font-size: v
           <td class="no">03</td>
           <td class="name"><a href="/specimens/03-layout-thrashing.html">強制同步版面重排</a>
             <small>迴圈裡交替讀寫版面屬性，800 列就是 800 次</small>
-            <a class="rep" href="/reports/03-layout-thrashing.html">病理報告 →</a></td>
+            <a class="rep" href="/reports/03-layout-thrashing.html">病理報告 →</a>
+            <a class="rep" href="/measure.html?specimen=03-layout-thrashing">量測台 →</a></td>
           <td>forced style &amp; layout</td>
           <td class="val">731 ms → 三輪零幀</td>
           <td class="ratio">治療版無 entry，不報比值</td>
@@ -457,7 +462,8 @@ table.sheet caption { text-align: start; color: var(--color-muted); font-size: v
           <td class="no">04</td>
           <td class="name"><a href="/specimens/04-unthrottled-events.html">事件處理未節流</a>
             <small>scroll handler 每次事件掃過 8000 列</small>
-            <a class="rep" href="/reports/04-unthrottled-events.html">病理報告 →</a></td>
+            <a class="rep" href="/reports/04-unthrottled-events.html">病理報告 →</a>
+            <a class="rep" href="/measure.html?specimen=04-unthrottled-events">量測台 →</a></td>
           <td>掉幀峰值</td>
           <td class="val">99 → 10 幀</td>
           <td class="ratio">9.9×</td>
@@ -467,7 +473,8 @@ table.sheet caption { text-align: start; color: var(--color-muted); font-size: v
           <td class="no">05</td>
           <td class="name"><a href="/specimens/05-layout-shift.html">版面位移</a>
             <small>圖片沒尺寸、字族換入、延遲插入橫幅</small>
-            <a class="rep" href="/reports/05-layout-shift.html">病理報告 →</a></td>
+            <a class="rep" href="/reports/05-layout-shift.html">病理報告 →</a>
+            <a class="rep" href="/measure.html?specimen=05-layout-shift">量測台 →</a></td>
           <td>CLS</td>
           <td class="val">0.2474 → 0（無 entry）</td>
           <td class="ratio">三段梯度 2.4× / 2.8× / 歸零</td>
@@ -477,7 +484,8 @@ table.sheet caption { text-align: start; color: var(--color-muted); font-size: v
           <td class="no">06</td>
           <td class="name"><a href="/specimens/06-rerender-storm.html">re-render 風暴</a>
             <small>每 25ms 推一批，病變版每批重建整張 1000 列清單</small>
-            <a class="rep" href="/reports/06-rerender-storm.html">病理報告 →</a></td>
+            <a class="rep" href="/reports/06-rerender-storm.html">病理報告 →</a>
+            <a class="rep" href="/measure.html?specimen=06-rerender-storm">量測台 →</a></td>
           <td>有渲染的幀距 median</td>
           <td class="val">167 → 16.7 ms</td>
           <td class="ratio">10.0×</td>
@@ -586,8 +594,11 @@ table.sheet caption { text-align: start; color: var(--color-muted); font-size: v
     </p>
   </div>
   <div class="cta-row">
+    <!-- 這裡曾經指向 /docs/articles/01-....md —— docs/ 不進 dist，preview 的 fallback
+         會把首頁再吐一次（點下去像沒反應），正式站是 404。文章現在由
+         tools/build-articles.mjs 產到 /articles/。 -->
     <a class="chip" href="/measure.html">進量測台 →</a>
-    <a class="chip" href="/docs/articles/01-twelve-treatments-four-survive.md">讀第一篇：十二段治療處方，站得住的有四段</a>
+    <a class="chip" href="/articles/">讀文章：三篇，判準怎麼立、判決怎麼被推翻</a>
   </div>
 </section>
 </main>

@@ -33,20 +33,56 @@
   .mast a { display: inline-flex; align-items: center; min-height: 44px;
     color: var(--accent); white-space: nowrap; text-underline-offset: 0.2em; }
   .mast a:hover { color: var(--focus); }
+  /* 目前所在的區塊：不是靠顏色一種訊號，加一條底線與實墨字色 ——
+     「不准只用顏色表達狀態」是 WCAG 的要求，不是偏好 */
+  .mast a[aria-current] { color: var(--ink); text-decoration: none;
+    border-bottom: 2px solid var(--accent); }
   .rule  { border: 0; border-top: 3px solid var(--ink);  margin: 0.5rem 0 0; }
   .rule2 { border: 0; border-top: 1px solid var(--rule); margin: 4px 0 2rem; }
   h1 { font-family: var(--serif); font-size: 1.9rem; line-height: 1.3; margin: 0 0 1rem; }
-  h2 { font-family: var(--serif); font-size: 1.35rem; line-height: 1.35;
-    margin: 2.5rem 0 0.75rem; padding-top: 1rem; border-top: 1px solid var(--rule2); }
-  h3 { font-family: var(--serif); font-size: 1.1rem; margin: 2rem 0 0.5rem; }
+  /* 一份報告一萬多像素高，節與節的邊界必須用掃的就看得到 ——
+     舊版七節全是 h4（1rem，跟內文同級），結構等於不存在。
+     h2 是**唯一**的分節層級：實墨橫線 + 1.5rem，配上頁首目錄就能跳。 */
+  h2 { font-family: var(--serif); font-size: 1.5rem; line-height: 1.35; font-weight: 600;
+    margin: 3rem 0 0.75rem; padding-top: 1.25rem; border-top: 2px solid var(--ink);
+    scroll-margin-top: 1rem; }
+  h3 { font-family: var(--serif); font-size: 1.15rem; margin: 2rem 0 0.5rem;
+    scroll-margin-top: 1rem; }
   h4 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
+
+  /* 頁首目錄。零 JS、零 hover-only 資訊 —— 目錄本身就是可見的導覽，
+     所以標題不再另外掛「滑過才出現的錨點連結」。 */
+  .toc { margin: 0 0 1rem; padding: 0.75rem 0 0; border-top: 1px solid var(--rule); }
+  .toc b { display: block; font-family: var(--mono); font-size: 0.8rem;
+    letter-spacing: 0.05em; color: var(--muted); font-weight: 500; }
+  .toc ol { list-style: none; padding: 0; margin: 0.25rem 0 0; counter-reset: toc;
+    display: flex; flex-wrap: wrap; gap: 0 1.5rem; }
+  .toc li { margin: 0; counter-increment: toc; }
+  /* 可點擊文字不准斷成兩行；44px 靠 inline-flex 撐，不用 padding-block。
+     底線走 text-decoration 而不是 border-bottom —— 後者會畫在 44px 盒子的底緣，
+     離文字十幾像素，看起來不像「這幾個字的底線」。 */
+  .toc a { display: inline-flex; align-items: center; min-height: 44px;
+    white-space: nowrap; text-decoration: underline;
+    text-decoration-color: var(--rule); text-decoration-thickness: 1px;
+    text-underline-offset: 0.25em; }
+  .toc a::before { content: counter(toc) " "; font-family: var(--mono);
+    font-size: 0.8em; color: var(--neutral); margin-right: 0.4em;
+    text-decoration: none; }
+  /* hover 只做顏色，不疊第二種效果 */
+  .toc a:hover { color: var(--focus); text-decoration-color: var(--accent); }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
   p { margin: 0.75rem 0; }
   a { color: var(--accent); }
   a:hover { color: var(--focus); }
-  blockquote { margin: 1rem 0; padding: 0.25rem 1rem;
-    border-left: 3px solid var(--accent); background: var(--paper2);
+  /* 側邊色條（border-left 當裝飾）是模板味最重的一招，換成滿框 + 底色。
+     引言在這個站承載的是「出處與條件」，它該讀起來像一張夾進來的標籤，不像警告條。 */
+  blockquote { margin: 1.25rem 0; padding: 0.75rem 1rem;
+    border: 1px solid var(--rule); background: var(--paper2);
     color: var(--muted); }
   blockquote p { margin: 0.5rem 0; }
+  blockquote :first-child { margin-top: 0; }
+  blockquote :last-child { margin-bottom: 0; }
   code { font-family: var(--mono); font-size: 0.875em;
     background: var(--paper2); padding: 0.1em 0.35em; border-radius: 3px;
     overflow-wrap: anywhere; }
@@ -55,9 +91,12 @@
   pre code { background: none; padding: 0; overflow-wrap: normal; }
   h1, h2, h3, h4, p, li { overflow-wrap: anywhere; min-width: 0; }
   .rlist { list-style: none; padding: 0; }
-  .rlist li { overflow-x: auto; margin: 0; }
+  .rlist li { margin: 0 0 1.25rem; padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--rule2); }
+  .rlist li:last-child { border-bottom: 0; }
   .rlist a { display: inline-flex; align-items: center; min-height: 44px;
-    white-space: nowrap; }
+    font-family: var(--serif); font-size: 1.15rem; }
+  .rlist p { margin: 0; font-size: 0.9rem; color: var(--muted); }
   .tw { overflow-x: auto; margin: 1rem 0; }
   table { border-collapse: collapse; font-size: 0.9rem; min-width: 100%; }
   th, td { text-align: left; padding: 0.45rem 0.75rem; vertical-align: top;
@@ -78,11 +117,25 @@
 <div class="page">
 <nav class="mast" aria-label="站內">
   <a href="/">← 標本索引</a>
-  <a href="/reports/">病理報告目錄</a>
+  <a href="/reports/" aria-current="page">病理報告</a>
+  <a href="/articles/">文章</a>
   <a href="/measure.html">量測台 →</a>
 </nav>
 <hr class="rule"><hr class="rule2">
 <h1>病理報告 · 02 長列表未虛擬化</h1>
+<nav class="toc" aria-label="本頁章節">
+  <b>本頁章節</b>
+  <ol>
+    <li><a href="#02-長列表未虛擬化">02 長列表未虛擬化</a></li>
+    <li><a href="#凍結條件">凍結條件</a></li>
+    <li><a href="#動工前登記的預期">動工前登記的預期</a></li>
+    <li><a href="#實測">實測</a></li>
+    <li><a href="#兇手歸因">兇手歸因</a></li>
+    <li><a href="#治療梯度">治療梯度</a></li>
+    <li><a href="#與登記的差異">與登記的差異</a></li>
+    <li><a href="#誠實揭露">誠實揭露</a></li>
+  </ol>
+</nav>
 <blockquote>
 <p>依 <code>docs/pathology-report-template.md</code>（版型八節，一節不刪）。
 實測數字<strong>只</strong>取自現行正典檔 <code>docs/measurements/2026-07-26-reproducibility-4x-5.json</code>
@@ -92,7 +145,7 @@
 跨 session 絕對值不可比（<code>phase2:944-945</code>），臂間比值只在同一份 JSON 內部成立。
 行號會漂（<code>phase2:1195-1199</code>），本報告引用行號時儘量連同內容一起引。</p>
 </blockquote>
-<h3>02 長列表未虛擬化</h3>
+<h2 id="02-長列表未虛擬化">02 長列表未虛擬化</h2>
 <p><strong>病症一句話</strong>：4x CPU 節流下首載，一次把 5000 列渲染成 40,021 個 DOM 節點，
 把整份 document 首屏最大那塊文字的繪製（LCP）拖到 <strong>1864ms</strong>（三輪 median）；
 <code>content-visibility</code> 一行 CSS 降到 520ms（3.6×），虛擬滾動降到 80ms（23.3×）——
@@ -103,7 +156,7 @@
 <code>phase2:1201-1213</code> 追記）。本標本量的是「說明文字多久畫得出來，而清單把它擋住了」，
 不是「清單自己成為 LCP」。這個差別寫在兇手歸因一節，讀者靠它判斷能不能複製這個實驗。</p>
 </blockquote>
-<h4>凍結條件</h4>
+<h2 id="凍結條件">凍結條件</h2>
 <p>同一組條件之間才能比較。任何一項改動，先前所有數字作廢。</p>
 <div class="tw"><table>
 <thead>
@@ -151,7 +204,7 @@
 <li>⚠️ <strong>「請不要動」那段操作說明文字是一個從未登記的凍結變因</strong>（<code>phase2:1219-1223</code>；<code>docs/HANDOFF.md:43-45</code>）。它就是 LCP 標的，改一個字就改變標的尺寸、甚至換掉標的本身 —— 本標本所有 LCP 數字都綁在這段文字的現行長度上。</li>
 <li><code>dispatchSpanMs</code> / <code>dispatchSpanNominalMs</code>：#2 的 records <strong>沒有這兩個欄位</strong>（實查正典 JSON）—— 本標本不走絕對排程，走間隔迴圈；無欄位，不是 0。</li>
 </ul>
-<h4>動工前登記的預期</h4>
+<h2 id="動工前登記的預期">動工前登記的預期</h2>
 <blockquote>
 <p>登記出處：<code>docs/phase2-expected-results.md:179-231</code>（標本 #2 段）。
 修正出處：<code>phase2:326-340</code>（煙霧測試）、<code>:539-545</code>（節點數計數 bug）、<code>:936-940</code>（判 unstable）、
@@ -201,7 +254,7 @@ buffer ±5，<code>phase2:185-189</code>）與程式逐項一致（<code>specime
 <li>登記時引用的 <code>spec:1060</code> 舉例「5,000 節點 → 60 節點」（<code>phase2:221</code>）與本站設計不同源：
 buffer ±5 在 800×600 下實際渲染 <strong>15 列</strong>（records <code>renderedItems</code>），引用時要註明。</li>
 </ul>
-<h4>實測</h4>
+<h2 id="實測">實測</h2>
 <p>三輪，同一組凍結條件。<strong>離散度算在每輪的 median 上，不是 max</strong>（<code>src/protocol.ts:309</code>
 「抗離群。可重現性判定用這個，不用 max」）。LCP 是 per-document 單值，每輪一筆、
 該筆即該輪 median。相對離散度 = (max − min) / median-of-three。</p>
@@ -287,7 +340,7 @@ buffer ±5 在 800×600 下實際渲染 <strong>15 列</strong>（records <code>
 <li>⚠️ <code>fixed-virtual</code> 的 <code>droppedFramesPeak</code> 9 / 9 / 10 是<strong>全表唯一超過掉幀底線（5 幀）的臂</strong>，
 而且出現在<strong>治療臂</strong>。broken 反而三輪皆 0。這件事兩份 phase 檔都沒記，見「與登記的差異」。</li>
 </ul>
-<h4>兇手歸因</h4>
+<h2 id="兇手歸因">兇手歸因</h2>
 <p>登記兇手 <code>lcp</code>（<code>phase2:216</code>）。INP 三段結構性無樣本，表格照模板列出、如實填「無樣本」：</p>
 <div class="tw"><table>
 <thead>
@@ -373,7 +426,7 @@ buffer ±5 在 800×600 下實際渲染 <strong>15 列</strong>（records <code>
 <code>forcedStyleAndLayoutDuration</code> 是逐 script 的，所以只有它能乾淨濾掉外殼貢獻 ——
 本標本兩者都沒有進入判定（無強制版面樣本），列出是為了讓讀者確認「沒有」。</p>
 </blockquote>
-<h4>治療梯度</h4>
+<h2 id="治療梯度">治療梯度</h2>
 <div class="tw"><table>
 <thead>
 <tr>
@@ -408,7 +461,7 @@ buffer ±5 在 800×600 下實際渲染 <strong>15 列</strong>（records <code>
 <p>無效或反向的治療：無 —— 但<strong>治療二在次要指標上有一筆反向</strong>（捲動期掉幀 9/9/10 vs
 病變的 0/0/0），照實列在代價欄。它是 <code>renderWindow()</code> 每次捲動重建視窗的真實成本，
 不是雜訊（三輪 9/9/10，離散度 (10−9)/9 = 11%，穩定重現）。</p>
-<h4>與登記的差異</h4>
+<h2 id="與登記的差異">與登記的差異</h2>
 <p>逐條對照，三種結局分開寫：</p>
 <ul>
 <li><strong>符合（誤差 ≤ 30%）</strong>：<ul>
@@ -465,7 +518,7 @@ iframe 與外殼共用 renderer 主執行緒，前一份 document 的拆除落�
 （<code>tools/reproducibility.mjs:692-694</code>）。引用不標條件，等於拿 1x 的數字描述 4x 的結論。
 ② <strong>正典 JSON 沒有 <code>protocolVersion</code> 欄位</strong>：頂層鍵只有 <code>measuredAt / driver / cpuThrottle / cpuThrottlingRate / runsPerMode / specimensCovered / isFullSweep / records / problems / consoleErrors</code>，驅動器程式全文也不寫入該欄。凍結契約的常數在 <code>src/protocol.ts:8</code>，
 但「JSON 值必須等於 1」這條驗證<strong>無從執行</strong> —— 兩份 phase 檔都沒記，留給主執行緒。</p>
-<h4>誠實揭露</h4>
+<h2 id="誠實揭露">誠實揭露</h2>
 <ul>
 <li><strong>這個標本沒有示範的東西</strong>：<ul>
 <li><strong>LCP 標的不是列，是儀器自己的操作說明文字</strong>（<code>phase2:1201-1225</code>）。本標本示範的是
@@ -545,7 +598,7 @@ LCP candidate，所以圖片版根本量不到），但「長列表拖垮 LCP」
   <p>每個數字在文中都附了 JSON 欄位路徑或登記檔行號 ——
   原始資料在 <a href="https://github.com/BardKidd/FrontendMuseum">GitHub repo</a> 的
   <code>docs/measurements/</code>，可自行覆算。臂間比值只在同一份 JSON 內部成立。</p>
-  <p><a href="/">← 標本索引</a> <a href="/reports/">報告目錄</a> <a href="/measure.html">量測台 →</a></p>
+  <p><a href="/">← 標本索引</a> <a href="/reports/">報告目錄</a> <a href="/articles/">文章</a> <a href="/measure.html">量測台 →</a></p>
 </footer>
 </div>
 </body>

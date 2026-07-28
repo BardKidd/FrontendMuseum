@@ -85,9 +85,11 @@
 
 /* contain: content = layout paint style。面板重繪不外溢到 iframe 所在的格線，
    也不會讓外殼的 style recalc 掃過整個 document。 */
+/* 分節線改成實墨（原本是 --color-rule 的淺灰）。九節之間的邊界是這份報告
+   唯一的結構訊號，淺到看不見的話就等於沒有分節。 */
 .rep-sec {
   contain: content;
-  border-top: var(--rule-hair) solid var(--color-rule);
+  border-top: var(--rule-hair) solid var(--color-ink);
   padding-block: var(--space-lg);
 }
 
@@ -96,14 +98,23 @@
   padding-top: 0;
 }
 
-/* 區塊標籤。中文沒有小型大寫可用，所以靠字級 + 字距 + 弱化色分層 */
+/* 區塊標籤。
+ *
+ * 曾經是 `--text-xs`（12px）+ 弱化色 —— 跟它底下的 `.rep-note` 同級同色，
+ * 於是九節報告在畫面上沒有任何可掃視的邊界，要逐字讀才知道自己在第幾節。
+ * 實測字級分布是 `{11:2, 12:63, 14:37, 16:6}`：整頁只有兩級字。
+ *
+ * 現在靠三件事分層：字級（16px）、實墨色、以及 `.rep-sec` 那條分節線。
+ * 字距從 0.14em 收到 0.06em —— 中文在 16px 下不需要靠拉開字距來製造標題感，
+ * 拉太開反而讓詞界糊掉。 */
 .rep-h {
   margin: 0 0 var(--space-sm);
   font-family: var(--font-body);
-  font-size: var(--text-xs);
+  font-size: var(--text-base);
   font-weight: 600;
-  letter-spacing: 0.14em;
-  color: var(--color-muted);
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  color: var(--color-ink);
 }
 
 .rep p {
@@ -114,19 +125,28 @@
   margin-top: var(--space-xs);
 }
 
-/* 註腳級的說明文字。面板上大部分的誠實揭露都是這一級 —— 弱化但**不隱藏** */
+/* 註腳級的說明文字。面板上大部分的誠實揭露都是這一級 —— 弱化但**不隱藏**。
+ *
+ * 從 12px 拉到 14px：這一級承載的是解析度下限、豁免筆數、「沒有 entry」與「值是 0」
+ * 的區別 —— 全部是會改變讀者結論的句子。把它印成整頁最小的字，
+ * 等於用排版說「這些可以跳過」，跟本站的誠實原則正好相反。
+ * 真正的密集數值（表格、legend、傾印）留在 12px。 */
 .rep-note {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
+  line-height: 1.55;
   color: var(--color-muted);
 }
 
 /* 作廢通知 / 量化假影 / 離散度超標。accent 在整個面板只有兩種用途：
-   兇手段，與「這個數字有條件」。稀有才有重量。 */
+   兇手段，與「這個數字有條件」。稀有才有重量。
+   邊框走滿框而不是左側色條 —— 側邊色條是模板味最重的一招，
+   而且它在窄欄裡會被誤讀成「這一段是引言」。 */
 .rep-alert {
   margin-top: var(--space-sm);
-  padding-inline-start: var(--space-sm);
-  border-inline-start: 2px solid var(--color-accent);
-  font-size: var(--text-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--rule-hair) solid var(--color-accent);
+  font-size: var(--text-sm);
+  line-height: 1.55;
   color: var(--color-accent);
 }
 
@@ -500,10 +520,34 @@
   padding-top: var(--space-lg);
 }
 
+/* 點擊目標 ≥ 44px。`<summary>` 是可點擊元素，預設只有一行字高（實測 19.2px）——
+   用 inline-flex + min-height 撐，不加 padding-block（會把三角標記推離文字）。
+   `list-item` 是 summary 的預設 display；改成 flex 會讓 UA 的展開三角消失，
+   所以三角自己畫一個。 */
 .rep-dump summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-height: 44px;
   cursor: pointer;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--color-muted);
+}
+
+.rep-dump summary::marker,
+.rep-dump summary::-webkit-details-marker {
+  content: '';
+  display: none;
+}
+
+.rep-dump summary::before {
+  content: '▸';
+  font-family: var(--font-mono);
+  color: var(--color-accent);
+}
+
+.rep-dump[open] > summary::before {
+  content: '▾';
 }
 
 .rep-dump summary:hover {

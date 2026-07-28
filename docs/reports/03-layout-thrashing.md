@@ -5,7 +5,7 @@
 > `sweep.consoleErrors` 為空）。其他 session 的數字只以「另一 session」或「已作廢」
 > 的身分出現，並逐一標明來源。跨 session 絕對值不可比（`phase1:455-456`、`phase2:944-945`）。
 
-### 03 強制同步版面重排（Layout Thrashing）
+## 03 強制同步版面重排（Layout Thrashing）
 
 **病症一句話**：對 800 列的清單交替「讀 `offsetHeight`、寫 `width`」，
 每次點擊觸發**中位 829~964ms** 的強制同步版面重排（本 session、4x 宣告節流，
@@ -25,7 +25,7 @@
 > 0726 上午三輪都有幀（0.1 / 0.1 / 0.4ms，出處：模板已填範例的治療梯度警語），
 > **本份 JSON 三輪零強制版面幀**。同一句話在三個 session 有三種真值。
 
-#### 凍結條件
+## 凍結條件
 
 同一組條件之間才能比較。任何一項改動，先前所有數字作廢。
 
@@ -46,7 +46,7 @@
 > 本份 JSON 同樣沒有 1x 臂，所以 throttle 這一格**只能是宣告**。
 > 要真的檢核，得在同一次 session、同一份 JSON 裡跑一支 1x 臂。
 
-#### 動工前登記的預期
+## 動工前登記的預期
 
 > 登記出處：`docs/phase1-expected-results.md:142-210`（標本 #3 段，動工前盲預測）。
 > **這一節不准回頭改去迎合實測。** 修正只出現在該檔「修正紀錄」（`phase1:218-263`）。
@@ -66,7 +66,7 @@
 - 動工時補登（`phase1:226-228`）：`intervalMs: 2500`（間隔必須大於 4x 病變上限，
   否則事件排隊、兇手翻成 inputDelay）、`repetitions: 10`、行高 24px 寫死
 
-#### 實測
+## 實測
 
 三輪，同一組凍結條件。**離散度算在每輪的 median 上，不是 max** ——
 `protocol.ts:309`：「抗離群。可重現性判定用這個，不用 max」（模板引用的 `:290` 已漂移，
@@ -96,7 +96,7 @@ INP median 另計（`records[*].stats.median`，每輪 10 次互動的 median；
 臂間比值 **21.2×**（= 1016 ÷ 48，兩臂各取三輪 median 的中位，同一份 JSON 內部）。
 治療臂 48ms 高於 INP 雜訊底線 16ms，比值可報。
 
-#### 兇手歸因
+## 兇手歸因
 
 代表互動（INP 那一筆）的三段拆解，`records[*].inputDelay / .processing / .presentation`：
 
@@ -141,7 +141,7 @@ broken 三輪 `loafPickedBy` 皆為 `forcedStyleAndLayout`
 規格上無法拆到單一 script；`forcedStyleAndLayoutDuration` 是逐 script 的，
 所以只有它能乾淨濾掉外殼貢獻（`spec:1067` 說本標本「數字最可信」的理由）。
 
-#### 治療梯度
+## 治療梯度
 
 | 治療 | forced median | 相對病變 | 代價 |
 |---|---|---|---|
@@ -174,7 +174,7 @@ broken 三輪 `loafPickedBy` 皆為 `forcedStyleAndLayout`
 > 四次與十次必然落在不同相位，兩個數字本來就不該相同。
 > 本份 JSON 是十次點擊，六筆全部 54888。
 
-#### 與登記的差異
+## 與登記的差異
 
 - **符合**（誤差 ≤ 30%）：
   - 兇手段 processing，三輪一致（登記 `phase1:189`）✅
@@ -208,7 +208,7 @@ broken 三輪 `loafPickedBy` 皆為 `forcedStyleAndLayout`
 > 一組看起來很具體、還附了離散度的數字在檔案裡活了整輪都沒人問它從哪來 ——
 > 所以本報告每個數字都附欄位路徑或行號。
 
-#### 誠實揭露
+## 誠實揭露
 
 - 這個標本**沒有**示範的東西：只示範了一種讀寫交錯樣式（讀 `offsetHeight` / 寫 `width`）。
   沒有涵蓋 `getComputedStyle`、`scrollTop`、`getBoundingClientRect` 等其他強制重排觸發點

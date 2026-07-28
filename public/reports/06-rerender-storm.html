@@ -33,20 +33,56 @@
   .mast a { display: inline-flex; align-items: center; min-height: 44px;
     color: var(--accent); white-space: nowrap; text-underline-offset: 0.2em; }
   .mast a:hover { color: var(--focus); }
+  /* 目前所在的區塊：不是靠顏色一種訊號，加一條底線與實墨字色 ——
+     「不准只用顏色表達狀態」是 WCAG 的要求，不是偏好 */
+  .mast a[aria-current] { color: var(--ink); text-decoration: none;
+    border-bottom: 2px solid var(--accent); }
   .rule  { border: 0; border-top: 3px solid var(--ink);  margin: 0.5rem 0 0; }
   .rule2 { border: 0; border-top: 1px solid var(--rule); margin: 4px 0 2rem; }
   h1 { font-family: var(--serif); font-size: 1.9rem; line-height: 1.3; margin: 0 0 1rem; }
-  h2 { font-family: var(--serif); font-size: 1.35rem; line-height: 1.35;
-    margin: 2.5rem 0 0.75rem; padding-top: 1rem; border-top: 1px solid var(--rule2); }
-  h3 { font-family: var(--serif); font-size: 1.1rem; margin: 2rem 0 0.5rem; }
+  /* 一份報告一萬多像素高，節與節的邊界必須用掃的就看得到 ——
+     舊版七節全是 h4（1rem，跟內文同級），結構等於不存在。
+     h2 是**唯一**的分節層級：實墨橫線 + 1.5rem，配上頁首目錄就能跳。 */
+  h2 { font-family: var(--serif); font-size: 1.5rem; line-height: 1.35; font-weight: 600;
+    margin: 3rem 0 0.75rem; padding-top: 1.25rem; border-top: 2px solid var(--ink);
+    scroll-margin-top: 1rem; }
+  h3 { font-family: var(--serif); font-size: 1.15rem; margin: 2rem 0 0.5rem;
+    scroll-margin-top: 1rem; }
   h4 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
+
+  /* 頁首目錄。零 JS、零 hover-only 資訊 —— 目錄本身就是可見的導覽，
+     所以標題不再另外掛「滑過才出現的錨點連結」。 */
+  .toc { margin: 0 0 1rem; padding: 0.75rem 0 0; border-top: 1px solid var(--rule); }
+  .toc b { display: block; font-family: var(--mono); font-size: 0.8rem;
+    letter-spacing: 0.05em; color: var(--muted); font-weight: 500; }
+  .toc ol { list-style: none; padding: 0; margin: 0.25rem 0 0; counter-reset: toc;
+    display: flex; flex-wrap: wrap; gap: 0 1.5rem; }
+  .toc li { margin: 0; counter-increment: toc; }
+  /* 可點擊文字不准斷成兩行；44px 靠 inline-flex 撐，不用 padding-block。
+     底線走 text-decoration 而不是 border-bottom —— 後者會畫在 44px 盒子的底緣，
+     離文字十幾像素，看起來不像「這幾個字的底線」。 */
+  .toc a { display: inline-flex; align-items: center; min-height: 44px;
+    white-space: nowrap; text-decoration: underline;
+    text-decoration-color: var(--rule); text-decoration-thickness: 1px;
+    text-underline-offset: 0.25em; }
+  .toc a::before { content: counter(toc) " "; font-family: var(--mono);
+    font-size: 0.8em; color: var(--neutral); margin-right: 0.4em;
+    text-decoration: none; }
+  /* hover 只做顏色，不疊第二種效果 */
+  .toc a:hover { color: var(--focus); text-decoration-color: var(--accent); }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
   p { margin: 0.75rem 0; }
   a { color: var(--accent); }
   a:hover { color: var(--focus); }
-  blockquote { margin: 1rem 0; padding: 0.25rem 1rem;
-    border-left: 3px solid var(--accent); background: var(--paper2);
+  /* 側邊色條（border-left 當裝飾）是模板味最重的一招，換成滿框 + 底色。
+     引言在這個站承載的是「出處與條件」，它該讀起來像一張夾進來的標籤，不像警告條。 */
+  blockquote { margin: 1.25rem 0; padding: 0.75rem 1rem;
+    border: 1px solid var(--rule); background: var(--paper2);
     color: var(--muted); }
   blockquote p { margin: 0.5rem 0; }
+  blockquote :first-child { margin-top: 0; }
+  blockquote :last-child { margin-bottom: 0; }
   code { font-family: var(--mono); font-size: 0.875em;
     background: var(--paper2); padding: 0.1em 0.35em; border-radius: 3px;
     overflow-wrap: anywhere; }
@@ -55,9 +91,12 @@
   pre code { background: none; padding: 0; overflow-wrap: normal; }
   h1, h2, h3, h4, p, li { overflow-wrap: anywhere; min-width: 0; }
   .rlist { list-style: none; padding: 0; }
-  .rlist li { overflow-x: auto; margin: 0; }
+  .rlist li { margin: 0 0 1.25rem; padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--rule2); }
+  .rlist li:last-child { border-bottom: 0; }
   .rlist a { display: inline-flex; align-items: center; min-height: 44px;
-    white-space: nowrap; }
+    font-family: var(--serif); font-size: 1.15rem; }
+  .rlist p { margin: 0; font-size: 0.9rem; color: var(--muted); }
   .tw { overflow-x: auto; margin: 1rem 0; }
   table { border-collapse: collapse; font-size: 0.9rem; min-width: 100%; }
   th, td { text-align: left; padding: 0.45rem 0.75rem; vertical-align: top;
@@ -78,11 +117,25 @@
 <div class="page">
 <nav class="mast" aria-label="站內">
   <a href="/">← 標本索引</a>
-  <a href="/reports/">病理報告目錄</a>
+  <a href="/reports/" aria-current="page">病理報告</a>
+  <a href="/articles/">文章</a>
   <a href="/measure.html">量測台 →</a>
 </nav>
 <hr class="rule"><hr class="rule2">
 <h1>病理報告 · 標本 #6</h1>
+<nav class="toc" aria-label="本頁章節">
+  <b>本頁章節</b>
+  <ol>
+    <li><a href="#06-高頻資料流造成的-re-render-風暴">06 高頻資料流造成的 re-ren…</a></li>
+    <li><a href="#凍結條件">凍結條件</a></li>
+    <li><a href="#動工前登記的預期">動工前登記的預期</a></li>
+    <li><a href="#實測">實測</a></li>
+    <li><a href="#兇手歸因">兇手歸因</a></li>
+    <li><a href="#治療梯度">治療梯度</a></li>
+    <li><a href="#與登記的差異">與登記的差異</a></li>
+    <li><a href="#誠實揭露">誠實揭露</a></li>
+  </ol>
+</nav>
 <blockquote>
 <p>依 <code>docs/pathology-report-template.md</code> 版型，八節全含，不刪節。</p>
 <p><strong>實測數字唯一來源</strong>：<code>docs/measurements/2026-07-26-reproducibility-4x-5.json</code>
@@ -97,7 +150,7 @@
 文中出現的倍率一律是描述性的，並各自附警語。</p>
 </blockquote>
 <hr>
-<h3>06 高頻資料流造成的 re-render 風暴</h3>
+<h2 id="06-高頻資料流造成的-re-render-風暴">06 高頻資料流造成的 re-render 風暴</h2>
 <p><strong>病症一句話</strong>：按一次「開始推送」後靜置 5 秒，模擬資料流每 25ms 推一批 100 台裝置更新
 （共 1000 台）；病變版每收到一批就重建整張 1000 列清單，5 秒量測窗（60Hz，窗頂約 300 幀）
 內掉幀峰值 <strong>275~281 —— 幾乎每一幀都掉</strong>，有渲染的幀距 median 約 200ms（一秒五格畫面）；
@@ -110,7 +163,7 @@
 （上午 281/284/277 → 本輪 281/277/275，<code>phase2:1087</code>）——
 <strong>於是兩臂的比值也是機器的函數</strong>（<code>phase2:1088-1090</code>），單獨引用這句話時必須連 session 一起引。</p>
 </blockquote>
-<h4>凍結條件</h4>
+<h2 id="凍結條件">凍結條件</h2>
 <p>同一組條件之間才能比較。任何一項改動，先前所有數字作廢。</p>
 <div class="tw"><table>
 <thead>
@@ -168,7 +221,7 @@
 以 <code>runIdBefore</code> 對回 history —— <code>tools/reproducibility.mjs:651-655</code>），缺號是簿記不是丟樣本；
 此為推斷，已列入待複核。</p>
 </blockquote>
-<h4>動工前登記的預期</h4>
+<h2 id="動工前登記的預期">動工前登記的預期</h2>
 <blockquote>
 <p>登記出處（分層，後者修正前者、原文皆未動）：
 原始登記 <code>phase2:126-176</code>（200 台 / 50ms）→ 校準 <code>phase2:361-377</code>（1000 台）→
@@ -205,7 +258,7 @@
 </ol>
 </li>
 </ul>
-<h4>實測</h4>
+<h2 id="實測">實測</h2>
 <p>三輪，同一組凍結條件。<strong>離散度算在每輪的值上、判定不用 max</strong>
 （<code>src/protocol.ts:309</code>「抗離群。可重現性判定用這個，不用 max」——
 模板引作 <code>:290</code>，行號已漂）。相對離散度 = (max − min) ÷ median-of-three。</p>
@@ -351,7 +404,7 @@
 <li><strong>可證偽判準未倒。</strong> <code>fixed-granular</code> 的 <code>rendersSkipped</code> 三輪皆 0（<code>ts:34-35</code> 登記：
 若 &gt; 0 樹狀梯度理由重寫）—— 本輪不需要重寫。</li>
 </ol>
-<h4>兇手歸因</h4>
+<h2 id="兇手歸因">兇手歸因</h2>
 <p>登記的兇手是 <strong>loaf</strong>（<code>phase2:161</code>），不是 INP 段 —— 本標本整輪只有「開始推送」那一下點擊
 （<code>totalInteractions</code> 12 筆皆 1，<code>stats.n</code> 皆 1，<code>isMaxNotP98: true</code>），
 INP 16~24ms 落在 16ms 底線與 8ms 量化網格上，<strong>四臂等價、不做任何臂間排名</strong>。
@@ -444,7 +497,7 @@ LoAF 側的佐證方向一致：broken 被選出的幀 141</del>143ms、三輪�
 <code>blockingDuration</code> 是整幀的值，<strong>含外殼</strong>，規格上無法拆到單一 script；
 <code>forcedStyleAndLayoutDuration</code> 是逐 script 的，所以只有它能乾淨濾掉外殼貢獻。</p>
 </blockquote>
-<h4>治療梯度</h4>
+<h2 id="治療梯度">治療梯度</h2>
 <p><strong>梯度是樹狀不是鏈狀</strong>（<code>phase2:784-793</code>、<code>src/specimens.ts:381-391</code>）：
 治療二與治療二乙都接在治療一之後、互為<strong>兄弟</strong>，各自相對父臂只翻一個變因。
 背壓臂不是「治療三」—— 叫治療三會讓讀者以為它疊在細粒度之上。</p>
@@ -503,7 +556,7 @@ LoAF 側的佐證方向一致：broken 被選出的幀 141</del>143ms、三輪�
 </ul>
 <p>無效或反向的治療：本輪無。前兩輪的「治療一 1.04× 零效果」（<code>phase2:497-504</code>）
 是舊參數未進作用區間，重設計後翻案 —— 見下一節。</p>
-<h4>與登記的差異</h4>
+<h2 id="與登記的差異">與登記的差異</h2>
 <ul>
 <li><strong>符合</strong>（誤差 ≤ 30%）：<ul>
 <li><code>broken</code> 281 / 277 / 275 落在原始登記 4x 帶 150~290（<code>phase2:153</code>；1000 台校準後沿用，
@@ -545,7 +598,7 @@ LoAF 側的佐證方向一致：broken 被選出的幀 141</del>143ms、三輪�
 </ul>
 <p>處置順序固定：① 查環境 ② 換更精確的驅動方式 ③ <strong>最後</strong>才動 protocol。
 本輪 <code>sweep.problems</code> 為空、<code>catchupClamped</code> 全 0、節拍欄不適用（無節拍器），①②無事可查。</p>
-<h4>誠實揭露</h4>
+<h2 id="誠實揭露">誠實揭露</h2>
 <ul>
 <li><strong>這個標本沒有示範的東西</strong>：<ul>
 <li>真 WebSocket。資料流是 <code>setInterval</code> 模擬（<code>ts:40-44</code>），刻意排除網路抖動 ——
@@ -597,7 +650,7 @@ session window 產生</strong>（來源未查；<code>clsIgnoredByInput</code> �
   <p>每個數字在文中都附了 JSON 欄位路徑或登記檔行號 ——
   原始資料在 <a href="https://github.com/BardKidd/FrontendMuseum">GitHub repo</a> 的
   <code>docs/measurements/</code>，可自行覆算。臂間比值只在同一份 JSON 內部成立。</p>
-  <p><a href="/">← 標本索引</a> <a href="/reports/">報告目錄</a> <a href="/measure.html">量測台 →</a></p>
+  <p><a href="/">← 標本索引</a> <a href="/reports/">報告目錄</a> <a href="/articles/">文章</a> <a href="/measure.html">量測台 →</a></p>
 </footer>
 </div>
 </body>

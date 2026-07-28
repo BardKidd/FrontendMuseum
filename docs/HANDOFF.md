@@ -236,3 +236,63 @@ fe4f795  fix(specimens)     四個設計缺陷
 都蓋著慢約 12 小時的章（「2026-07-26 晚」實為 07-27 早），相對量測與檔案間先後順序不受影響，
 文件不回改。**VM 暫停/恢復會再漂** —— 治本是 `/etc/chrony/chrony.conf` 加一行
 `makestep 1 -1`（任何時候允許跳時），尚未做。
+
+---
+
+## 2026-07-28 · UI/UX 審查與修正
+
+一輪 `impeccable critique`（實跑 CDP，320 / 375 / 414 / 768 / 1280 五個寬度 × 三個面 + dark mode）
+判 24/40。**內容與誠實揭露是強項，短板全在「讀者怎麼走進去」那一層。** 本輪修完的：
+
+### 文章上站（P0，原本是壞連結）
+
+`docs/articles/` 三篇成稿只有一篇被連結，而那個連結指向 `/docs/articles/*.md` ——
+`docs/` 不進 `dist/`，preview 的 SPA fallback 會把首頁再吐一次（點下去像沒反應），
+正式站是 404。新增 `tools/build-articles.mjs` → `public/articles/`，首頁 CTA 與導覽改指 `/articles/`。
+
+`npm run build:docs` = 報告 + 文章一起產。**產出要 commit**（與 `public/reports/` 同一條路線）。
+
+### 長文件可跳節
+
+- 六份報告的 md 從 `h1 → h3 → h4×7`（跳級、七節全部 16px＝內文）收成 `h1 → h2×8`
+- `h2` 改成 1.5rem + 2px 實墨橫線；頁首加零 JS 章節目錄，heading 掛中文 slug id
+- 目錄標籤有寬度預算（15 個全形字）。**這是量出來的**：文章的 h2 是整句，
+  「二、雜訊底噪不是猜的——一段從未執行的程式碼替我量了它」在目錄裡寬 444px、容器 280px，
+  於是整頁橫向捲了 144px。三段式收斂：砍句尾括號註 → 取子句頭 → 硬切加刪節號
+- CSS／報頭／目錄抽到 `tools/lib/doc-shell.mjs`，報告與文章共用一份
+
+### 量測台
+
+- **字級階層**：實測整頁只有兩級字（`{11:2, 12:63, 14:37, 16:6}`），`.rep-h`／`.shell-h`
+  跟它底下的 `.rep-note` 同為 12px 弱化色 —— 九節報告在畫面上沒有邊界。
+  現在是三級：16px 實墨標題（含分節線）／ 14px 內文與註 ／ 12px 密集數值
+- **節拍器搬到展示框正上方**。舊版：1280 寬時 iframe 裡要點的按鈕 y≈528、節拍器 y≈1067，
+  相距 540px，而這個標本的前提就是「照拍子點十次」。
+  `.shell-pace` 鎖 `min-height: 4rem` —— 它現在在 iframe 上方，翻拍時換行數一變就會推動 iframe，
+  那是**待量的那一幀裡的版面工作**
+- **CPU throttle 未宣告的警示**就地長在下拉旁邊（面板那一份留著，它進快照）
+- **預設標本從 `SPECIMENS[0]`（校準件）改成 `01-main-thread-block`**。
+  校準件不是六個標本之一，讓訪客落在它上面是 IA 錯誤。
+  ⚠️ **這一改讓三支工具整批掛掉**（`specimen never mounted`）—— `acceptance.mjs`、
+  `reproducibility.mjs`、`b-class-isolation.mjs` 全都假設「開 `measure.html` 就會是校準件」。
+  那從來不是契約，是舊預設值的巧合。三支都改成走 `?specimen=00-calibration` 深連結
+- `aria-current` 補在標本／mode 按鈕上，**`disabled` 原封不動**（工具靠它判斷狀態）
+- `measure.html` 的回首頁連結從「刻意零樣式」改成 `.shell-home`：
+  舊狀態是瀏覽器預設藍底線連結、高 24px，出現在量測台的第一個像素上
+- `<summary>` 撐到 44px；`.rep-alert` 的左側色條改滿框
+
+### 本輪的驗收
+
+| 項目 | 結果 |
+|---|---|
+| `tools/acceptance.mjs` | 13 / 13（load ~1.1） |
+| 外殼成本閘門 | `shellScript` 三輪皆 0.0ms，基線 median 0.00ms、閘門漲幅 > 2ms |
+| 四道 gate × 5 寬度 × 5 頁 + dark | 水平捲動 0、可點擊斷行 0、< 44px 目標 0、對比不足 0 |
+| 錨點跳轉 | scrollY 0 → 8506（頁高 11328） |
+
+### 沒動、留著的
+
+- 首頁 hero 的 `66 筆` 與 stat strip 的 `0.0% 本輪最佳離散度`。
+  後者跟 `Panel.tsx` 自己寫的「不列最佳值 —— best-of 是挑櫻桃」矛盾，**這是挑數字，留給人決定**
+- 量測台的術語（LoAF / interactionId / presentation / spread）零處內文定義
+- 量測台沒有「這一頁要你做什麼」的開場句

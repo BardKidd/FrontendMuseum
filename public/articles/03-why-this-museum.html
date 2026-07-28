@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>為什麼蓋一座標本館，而不是再寫一篇效能技巧文 · 前端效能病理標本館</title>
+<style>
+  :root {
+    --paper:   oklch(97%   0.008 80);
+    --paper2:  oklch(94.5% 0.011 78);
+    --rule:    oklch(84%   0.010 70);
+    --rule2:   oklch(90%   0.008 74);
+    --neutral: oklch(58%   0.009 60);
+    --muted:   oklch(43%   0.009 55);
+    --ink:     oklch(21%   0.011 45);
+    --accent:  oklch(45%   0.145 28);
+    --focus:   oklch(52%   0.170 28);
+    --serif: ui-serif, "Noto Serif CJK TC", "Noto Serif TC", Georgia, serif;
+    --sans:  ui-sans-serif, system-ui, "Noto Sans CJK TC", sans-serif;
+    --mono:  ui-monospace, "Noto Sans Mono CJK TC", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); line-height: 1.75; font-size: 1rem;
+    -webkit-text-size-adjust: 100%;
+  }
+  .page { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+  .mast { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.05em;
+    color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem;
+    justify-content: space-between; }
+  .mast a { display: inline-flex; align-items: center; min-height: 44px;
+    color: var(--accent); white-space: nowrap; text-underline-offset: 0.2em; }
+  .mast a:hover { color: var(--focus); }
+  /* 目前所在的區塊：不是靠顏色一種訊號，加一條底線與實墨字色 ——
+     「不准只用顏色表達狀態」是 WCAG 的要求，不是偏好 */
+  .mast a[aria-current] { color: var(--ink); text-decoration: none;
+    border-bottom: 2px solid var(--accent); }
+  .rule  { border: 0; border-top: 3px solid var(--ink);  margin: 0.5rem 0 0; }
+  .rule2 { border: 0; border-top: 1px solid var(--rule); margin: 4px 0 2rem; }
+  h1 { font-family: var(--serif); font-size: 1.9rem; line-height: 1.3; margin: 0 0 1rem; }
+  /* 一份報告一萬多像素高，節與節的邊界必須用掃的就看得到 ——
+     舊版七節全是 h4（1rem，跟內文同級），結構等於不存在。
+     h2 是**唯一**的分節層級：實墨橫線 + 1.5rem，配上頁首目錄就能跳。 */
+  h2 { font-family: var(--serif); font-size: 1.5rem; line-height: 1.35; font-weight: 600;
+    margin: 3rem 0 0.75rem; padding-top: 1.25rem; border-top: 2px solid var(--ink);
+    scroll-margin-top: 1rem; }
+  h3 { font-family: var(--serif); font-size: 1.15rem; margin: 2rem 0 0.5rem;
+    scroll-margin-top: 1rem; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
+
+  /* 頁首目錄。零 JS、零 hover-only 資訊 —— 目錄本身就是可見的導覽，
+     所以標題不再另外掛「滑過才出現的錨點連結」。 */
+  .toc { margin: 0 0 1rem; padding: 0.75rem 0 0; border-top: 1px solid var(--rule); }
+  .toc b { display: block; font-family: var(--mono); font-size: 0.8rem;
+    letter-spacing: 0.05em; color: var(--muted); font-weight: 500; }
+  .toc ol { list-style: none; padding: 0; margin: 0.25rem 0 0; counter-reset: toc;
+    display: flex; flex-wrap: wrap; gap: 0 1.5rem; }
+  .toc li { margin: 0; counter-increment: toc; }
+  /* 可點擊文字不准斷成兩行；44px 靠 inline-flex 撐，不用 padding-block。
+     底線走 text-decoration 而不是 border-bottom —— 後者會畫在 44px 盒子的底緣，
+     離文字十幾像素，看起來不像「這幾個字的底線」。 */
+  .toc a { display: inline-flex; align-items: center; min-height: 44px;
+    white-space: nowrap; text-decoration: underline;
+    text-decoration-color: var(--rule); text-decoration-thickness: 1px;
+    text-underline-offset: 0.25em; }
+  .toc a::before { content: counter(toc) " "; font-family: var(--mono);
+    font-size: 0.8em; color: var(--neutral); margin-right: 0.4em;
+    text-decoration: none; }
+  /* hover 只做顏色，不疊第二種效果 */
+  .toc a:hover { color: var(--focus); text-decoration-color: var(--accent); }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+  p { margin: 0.75rem 0; }
+  a { color: var(--accent); }
+  a:hover { color: var(--focus); }
+  /* 側邊色條（border-left 當裝飾）是模板味最重的一招，換成滿框 + 底色。
+     引言在這個站承載的是「出處與條件」，它該讀起來像一張夾進來的標籤，不像警告條。 */
+  blockquote { margin: 1.25rem 0; padding: 0.75rem 1rem;
+    border: 1px solid var(--rule); background: var(--paper2);
+    color: var(--muted); }
+  blockquote p { margin: 0.5rem 0; }
+  blockquote :first-child { margin-top: 0; }
+  blockquote :last-child { margin-bottom: 0; }
+  code { font-family: var(--mono); font-size: 0.875em;
+    background: var(--paper2); padding: 0.1em 0.35em; border-radius: 3px;
+    overflow-wrap: anywhere; }
+  pre { background: var(--paper2); border: 1px solid var(--rule2);
+    padding: 0.75rem 1rem; overflow-x: auto; line-height: 1.6; }
+  pre code { background: none; padding: 0; overflow-wrap: normal; }
+  h1, h2, h3, h4, p, li { overflow-wrap: anywhere; min-width: 0; }
+  .rlist { list-style: none; padding: 0; }
+  .rlist li { margin: 0 0 1.25rem; padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--rule2); }
+  .rlist li:last-child { border-bottom: 0; }
+  .rlist a { display: inline-flex; align-items: center; min-height: 44px;
+    font-family: var(--serif); font-size: 1.15rem; }
+  .rlist p { margin: 0; font-size: 0.9rem; color: var(--muted); }
+  .tw { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; font-size: 0.9rem; min-width: 100%; }
+  th, td { text-align: left; padding: 0.45rem 0.75rem; vertical-align: top;
+    border-bottom: 1px solid var(--rule2); }
+  th { font-family: var(--mono); font-weight: 600; font-size: 0.8rem;
+    letter-spacing: 0.04em; color: var(--muted);
+    border-bottom: 2px solid var(--rule); white-space: nowrap; }
+  ul, ol { padding-left: 1.5rem; }
+  li { margin: 0.35rem 0; }
+  strong { font-weight: 650; }
+  .foot { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 0.8rem; color: var(--neutral); }
+  .foot a { white-space: nowrap; display: inline-flex; min-height: 44px;
+    align-items: center; margin-right: 1.25rem; }
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="mast" aria-label="站內">
+  <a href="/">← 標本索引</a>
+  <a href="/reports/">病理報告</a>
+  <a href="/articles/" aria-current="page">文章</a>
+  <a href="/measure.html">量測台 →</a>
+</nav>
+<hr class="rule"><hr class="rule2">
+<h1>為什麼蓋一座標本館，而不是再寫一篇效能技巧文</h1>
+<nav class="toc" aria-label="本頁章節">
+  <b>本頁章節</b>
+  <ol>
+    <li><a href="#一技巧文的問題不是建議錯是它發現不了自己錯">一、技巧文的問題不是建議錯</a></li>
+    <li><a href="#二館的形狀">二、館的形狀</a></li>
+    <li><a href="#三數字憑什麼可信五道防線">三、數字憑什麼可信：五道防線</a></li>
+    <li><a href="#四防線的功能不是擋掉失敗是把失敗變成資料三個真實案例">四、防線的功能不是擋掉失敗</a></li>
+    <li><a href="#五你能拿走的一六個標本各一句話">五、你能拿走的（一）</a></li>
+    <li><a href="#六你能拿走的二一套可以偷走的方法論">六、你能拿走的（二）</a></li>
+    <li><a href="#七怎麼讀這座館">七、怎麼讀這座館</a></li>
+    <li><a href="#附錄這篇文章沒有做到的事">附錄：這篇文章沒有做到的事</a></li>
+  </ol>
+</nav>
+<blockquote>
+<p>前端效能病理標本館 · 第三篇 · 入口總覽
+本文不產生新數字。每個數字都引自已發出的兩篇文章、六份病理報告或 <code>docs/</code> 的登記檔，
+逐處標明來源與 session。已發出的文章不回頭改數字（本站規矩），
+所以本文引用它們時，連同「後來被翻案」的部分一起引。</p>
+</blockquote>
+<p>我蓋了一座前端效能的病理標本館。六個標本，每個是一個效能反模式：
+同一頁可以切換病變版與治療版，旁邊的面板顯示實測指標。</p>
+<p>它是一份實驗，不是一個應用程式。整座館只做一種宣稱：</p>
+<blockquote>
+<p><strong>其他條件全部凍結時，翻動這一個變因，產生這個差距。</strong>
+（<code>perf-pathology-museum-spec.md</code> §1）</p>
+</blockquote>
+<p>這篇是入口，回答三個問題：為什麼是標本館，不是再一篇技巧文；
+這裡的數字憑什麼可信；你能從這裡拿走什麼。</p>
+<hr>
+<h2 id="一技巧文的問題不是建議錯是它發現不了自己錯">一、技巧文的問題不是建議錯，是它發現不了自己錯</h2>
+<p>網路上的效能文章大多長這樣：「長列表請使用虛擬滾動」，附一張優化前後的截圖，講完了。</p>
+<p>本站也量了虛擬滾動。第一輪的結果是 LCP 1360 → 680ms，<strong>2.0 倍</strong>，發表在第一篇文章裡
+（《十二段治療處方，站得住的有四段》，原始資料
+<code>docs/measurements/2026-07-25-reproducibility-4x.json</code>）。</p>
+<p>後來查出來，真實答案是 <strong>23.3 倍</strong>（第二篇，<code>2026-07-26-reproducibility-4x-5.json</code>）。</p>
+<p>差在哪？不在標本——標本一個字都沒改。差在量測方法：切換 mode 時，
+前一份 document 的拆除工作落在新 document 的時鐘裡，LCP 因此帶著一個由
+「前一個 mode 有多重」決定的加項。同一輪之內實測，這個污染項約 <strong>790ms，是訊號的八倍</strong>；
+最刺眼的一組對照是 <strong>141 個節點的 document，載入耗時是 40,021 個節點那份的五倍</strong>
+（DCL 8,527<del>9,553ms 對 819</del>1,907ms，第二篇第五節）。</p>
+<p>這個缺陷沒有症狀，而且它讓數字<strong>更漂亮</strong>：污染是常數，常數不製造離散度，
+於是那一輪標本 #2 的離散度 2.9%，全站最漂亮的數字之一。
+單次量測的截圖抓不到這種錯；連「連跑三輪」都抓不到——
+<strong>一個穩定的錯誤，可重現性判準對它一無所知</strong>（第二篇第五節）。</p>
+<p>第二個例子更直接。第一輪量測跑完時，面板上 12 段治療處方有 <strong>11 段看起來都在改善</strong>。
+拿判準和護欄計數器逐段過濾之後，效果既乾淨又可歸因的只剩 <strong>4 段</strong>（第一篇）。
+有的治療同時翻了兩個變因，有的從未進入作用區間，
+有一段的核心程式碼<strong>從未執行過</strong>——<code>rendersSkipped</code> 三輪恆為 0，
+要不是去看這個護欄計數器，它可以永遠躲著（第一篇第二節）。
+只看面板數字的話，這 12 段每一段都可以寫成一篇像樣的技巧文。</p>
+<p>所以差別不在結論，在<strong>機制</strong>：技巧文發表之後就結束了；
+標本館發表之後，錯誤還會被自己的流程抓回來，翻案紀錄跟原始結論擺在一起。
+第一篇的多處數字後來失效了，但那篇文章一個字不改——它是有日期、附原始資料連結的快照，
+第二篇講的正是它哪裡錯了、為什麼錯。</p>
+<hr>
+<h2 id="二館的形狀">二、館的形狀</h2>
+<p>六個標本（<code>specimens/</code>），每個是獨立頁面，外殼用 iframe 載入，面板顯示實測指標。
+標本分兩類，這個分法會影響整條量測路徑：</p>
+<ul>
+<li><strong>A 類</strong>（互動期指標：INP、強制版面、掉幀）——原地切換病變／治療。</li>
+<li><strong>B 類</strong>（載入期指標：LCP、CLS）——<strong>LCP 在第一次互動後定案，而且是 per-document 的</strong>，
+所以切 mode 必須重載整份 document。第一節那個 790ms 的污染，就是在 B 類上抓到的。</li>
+</ul>
+<p>館裡還有一個不算標本的東西：<strong>校準件</strong>（<code>specimens/00-calibration</code>）。
+它的每個負載都有解析解可以反推——忙迴圈 300ms，Event Timing 的 <code>processing</code> 段就該量到 300.x。
+實測 300.8~303.1ms（<code>docs/HANDOFF.md</code>，路由對調後的煙霧測）。
+它的功能是回答一個技巧文從來不問的問題：<strong>憑什麼相信量測層自己沒說謊？</strong></p>
+<p>驗收也是實跑出來的：<code>tools/acceptance.mjs</code> 用真實瀏覽器派送真實輸入跑 13 條檢查
+（合成的 <code>element.click()</code> 沒有 <code>interactionId</code>，Event Timing 一筆都不回報，
+所以必須走 CDP 的真實輸入）。這個 repo 沒有單元測試框架，<strong>驗收就是測試套件</strong>。</p>
+<hr>
+<h2 id="三數字憑什麼可信五道防線">三、數字憑什麼可信：五道防線</h2>
+<p>不是因為沒出過錯。出過的錯兩篇文章加起來寫了三萬多字。
+可信的理由是：<strong>每一道防線都在檔案裡留下它攔到了什麼。</strong></p>
+<h3>1. 凍結並宣告</h3>
+<p>viewport 凍結在 800×600（CLS 與 LCP 都是 viewport 相對量）；build 設定固定；
+<strong>零外部請求</strong>——不准 CDN 字體、不准第三方分析（spec §4.7），
+量測站點自己去要外部資源，等於把污染源寫進實驗器材。</p>
+<p>凍結不了的就宣告：<strong>CPU throttle 從 JS 偵測不到</strong>，所以 4x 是宣告值，
+印在面板和每一筆資料裡，不假裝是偵測值。驅動方式也宣告——
+全部數字是 CDP 機器驅動，不是人手，這件事每篇文章的頭三行都寫。</p>
+<h3>2. 動工前登記預期</h3>
+<p>每個標本動工前，預期的數字、兇手段、風險先寫進
+<code>docs/phase1-expected-results.md</code> / <code>docs/phase2-expected-results.md</code>。
+<strong>登記完不准回頭改</strong>——要改只能在檔尾追加修正紀錄，寫明改了什麼、作廢哪些數字。
+量完再寫預期的話，預期永遠是對的，這個檔案就沒有存在意義。</p>
+<h3>3. 判準在看資料之前定案</h3>
+<p>「可重現」不是形容詞，是三條機械判準：三輪比值落在同一個量級帶、三輪兇手段一致、
+病變值相對離散度 ≤ 30%（spec §1，原則 4）。</p>
+<p>比值判準有四條是後來補定案的，定案過程值得單獨講，因為它誠實到有點難堪：
+定案時<strong>已經看過兩輪實測，無法假裝沒看過</strong>。所以防線改成——每個數字都附推導、
+推導不引用「剛好過關」的落點，而且其中一條（#4 的 ≥ 2×）在已看過的資料上
+<strong>邊際只有 12%，下一輪落空是真實可能</strong>。挑數字的人若在迎合實測，
+不會挑一條可能打臉自己的線（<code>docs/phase2-expected-results.md</code> 檔尾追記「比值判準四條定案」）。</p>
+<p>下一輪掃描（<code>2026-07-26-reproducibility-4x-6.json</code>）四條首次生效，四條全過——
+包括那條邊際最薄的，實測 3.5×（phase2 檔尾「儀器修正後的完整掃描」）。</p>
+<h3>4. 負載問責</h3>
+<p>機器負載會讓數字撒謊：同一套驗收，load &lt; 2 時 13/13 全綠，
+load 3.7<del>5.8 時掉到 8</del>11，失敗項還會游移（<code>CLAUDE.md</code>）。
+所以量測工具開跑前檢查 load，<strong>≥ 2 直接拒跑</strong>；每一筆 record 都帶 <code>loadAvg1m</code> 欄位
+（phase2「儀器修正五條」）。現行正典掃描全程 load 0.82~1.61，寫在檔頭——
+以後「是機器還是標本」看欄位，不用吵。</p>
+<h3>5. 修變因，不修結論</h3>
+<p>量到不符預期，改的是實驗設計，不是把結論改成符合實測。
+這條規矩的必然結果，就是下一節那些翻案——它們不是防線失守的證據，
+是防線<strong>在工作</strong>的證據。</p>
+<hr>
+<h2 id="四防線的功能不是擋掉失敗是把失敗變成資料三個真實案例">四、防線的功能不是擋掉失敗，是把失敗變成資料：三個真實案例</h2>
+<h3>案例一：八格判決，翻了六格</h3>
+<p>第一篇判了八段治療有問題。修掉實驗設計的缺陷、重量一輪之後，八格翻了六格——
+而且<strong>往四個不同的方向翻</strong>（第二篇）：</p>
+<pre><code>歸零      #4 passive       0.63×  →  1.0×      隔離變因之後療效完全消失
+從無到有  #4 rAF 節流      沒發生 →  2.7×      合併閘門先前一次都沒觸發過
+變大      #1 scheduler.yield  17×  →  32×      混淆變因移除，效果反而更大
+沒動      #6 批次化        1.04×  →  1.2×      進了作用區間，還是零效果
+</code></pre>
+<p>「混淆變因一定在幫治療臂作弊」是個直覺，而這一輪有兩格是反過來的：
+工作量對齊之後 <code>scheduler.yield</code> 從 17 倍變 32 倍，量測污染修掉之後虛擬滾動從 2 倍變 23.3 倍。
+<strong>混淆變因往哪個方向偏，不能用直覺猜</strong>（第二篇第四、五節）。</p>
+<h3>案例二：#1 是交界標本——判準對它結構性不適用，照實登記</h3>
+<p>標本 #1（主執行緒阻塞）的兇手歸因，在較慢的機器狀態下三輪一致是 <code>presentation</code>；
+機器變快之後變成 <code>presentation / inputDelay / inputDelay</code>——三輪不一致，判準亮警示。
+質量在兩段之間<strong>整塊搬家</strong>（同一輪內：run1 presentation 951ms / inputDelay 0.8ms；
+run2 presentation 120ms / inputDelay 798ms），不是雜訊抖動
+（<code>docs/phase1-expected-results.md</code> 修正紀錄「標本 #1 兇手改判為交界標本」）。</p>
+<p>機制：INP 看不看得見排隊，不取決於有沒有排隊，
+取決於<strong>排隊期間瀏覽器有沒有機會畫</strong>。這支標本正好卡在那條界線上，
+兇手是機器速度的函數，不是標本的性質。</p>
+<p>裁決有三條，每一條都是誠實原則的實作：登記值不改（規矩 2），改成明文例外；
+兇手宣稱換成合成判準（<code>inputDelay + presentation</code> 合計 918~952ms，壓倒 <code>processing</code>）；
+<strong>分析器的警示保留不消——讀者應該看到它翻，然後被指到這一條裁決。</strong>
+交界本身就是展品，不是要修掉的缺陷。</p>
+<h3>案例三：#4 passive——登記的判準落空，照實記，不改判準</h3>
+<p>第二篇量到：把混淆變因隔離之後，<code>passive: true</code> 的掉幀 113 → 112，<strong>歸零</strong>。
+但那篇文章特意留了一句邊界警語：這把尺量的是主執行緒的出幀節奏，
+量不到 <code>passive</code> 真正買的東西（compositor 側不等 handler 就能先捲）——
+「量到一個零」是尺的解析度邊界的結論，不是「<code>passive</code> 沒用」的一般結論（第二篇第二節）。</p>
+<p>同一天晚上的下一輪掃描（<code>-4x-6.json</code>），這一臂<strong>三輪穩定優於病變版 7~8 幀</strong>
+（92/94/91 對 99/102/99），超出 5 幀的同格帶——
+登記的「<code>fixed-passive</code> 不得優於 <code>broken</code>」<strong>落空</strong>。
+可比性護欄全部對稱（<code>wheelEvents</code> 六筆皆 20、<code>passes</code> 兩臂同帶、load 同帶），
+「臂間工作量不對稱」和「機器狀態」兩個便宜解釋都被排除
+（phase2 檔尾「#4 fixed-passive 方向性判準落空」）。</p>
+<p>處置：<strong>落空照實記，判準不改。<strong>機制假說（<code>passive</code> 省下的是等待、不是工作，
+所以先前判它「不該有可量的效果」的推理可能才是錯的那個）明文標示</strong>未驗證</strong>，
+留給下一輪先驗機制再談改登記。可能錯的是登記時的推理，不是資料。</p>
+<p>一個判準的價值，恰恰在於它落空時你敢不敢把落空印出來。</p>
+<hr>
+<h2 id="五你能拿走的一六個標本各一句話">五、你能拿走的（一）：六個標本，各一句話</h2>
+<p>下表的實測全部出自同一份正典原始資料
+<code>docs/measurements/2026-07-26-reproducibility-4x-5.json</code>（4x 宣告節流、CDP 機器驅動、
+800×600、每 mode 三輪），完整推導在 <code>docs/reports/01~06</code> 六份病理報告，
+每個數字在報告裡都附了 JSON 欄位路徑。</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>標本</th>
+<th>病變（一句話）</th>
+<th>病變實測</th>
+<th>治療實測</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>#1 主執行緒阻塞</td>
+<td>十連發點擊，click handler 同步排序五萬筆訂單，把主執行緒整段佔住</td>
+<td>INP 三輪 median 1028 / 896 / 796ms</td>
+<td>切 chunk + 讓出：24~32ms</td>
+</tr>
+<tr>
+<td>#2 長列表</td>
+<td>5000 列一次渲染成 40,021 個 DOM 節點，最大那塊文字的繪製被擋住</td>
+<td>LCP 1864ms</td>
+<td><code>content-visibility</code> 520ms（3.6×）；虛擬滾動 80ms（23.3×，只建 141 個節點）</td>
+</tr>
+<tr>
+<td>#3 強制同步版面</td>
+<td>800 列交替「讀 <code>offsetHeight</code>、寫 <code>width</code>」，每列都逼瀏覽器重算版面</td>
+<td>forced median 829~964ms</td>
+<td>讀寫分離：<strong>三輪零強制版面幀</strong></td>
+</tr>
+<tr>
+<td>#4 未節流事件</td>
+<td>每個 scroll/wheel 都做一整輪 8000 次 <code>getBoundingClientRect()</code></td>
+<td>掉幀峰值 99~119</td>
+<td>rAF 節流：median 113 → 42</td>
+</tr>
+<tr>
+<td>#5 版面位移</td>
+<td>零互動，三個位移源（無尺寸圖、字族換入、插入橫幅）落進同一個 session window 累加</td>
+<td>CLS 0.2694（三輪逐位元相同）</td>
+<td>逐一預留空間：<strong>一筆 layout-shift entry 都沒有</strong></td>
+</tr>
+<tr>
+<td>#6 重繪風暴</td>
+<td>每 25ms 推一批更新，每批重建整張 1000 列清單</td>
+<td>掉幀峰值 275~281（300 幀的窗，幾乎每幀都掉）</td>
+<td>只改變動的節點：14~18，幀距貼回 16.7ms</td>
+</tr>
+</tbody></table></div>
+<p>三條必讀的警語，六份報告各自展開：</p>
+<ul>
+<li>**絕對值只屬於那個 session。**同一支標本一個字沒改，#3 的病變 forced median 在三個
+session 分別落在 678<del>745、1158</del>1376、829~964ms 三個不重疊的帶上，最大與最小差約兩倍，
+而每個 session 內部的離散度都通過判準（報告 03）。不標條件的數字會被當成這個病的常數。</li>
+<li><strong>治療臂的絕對值是機器速度的函數</strong>：#6 的細粒度臂同日同機從 85/59/84 漂到 14/18/18，
+工作量一格沒動（phase2 檔尾補記）。病變臂飽和所以不敏感，治療臂沒飽和所以敏感——
+<strong>連比值都是機器的函數</strong>（3.3× 與 15.4× 都是真的，差別在機器，第二篇第七節）。</li>
+<li><strong>不是每一臂都站得住。</strong>#4 的 IntersectionObserver 臂（10~16 幀）該輪判不可重現，
+絕對值不列為結論；#1 的兩個治療臂在下一輪也雙雙判不可重現（快機器把它們壓進
+INP 的 8ms 量化底噪）。哪臂不算數，報告裡逐臂寫明。</li>
+</ul>
+<h2 id="六你能拿走的二一套可以偷走的方法論">六、你能拿走的（二）：一套可以偷走的方法論</h2>
+<p>這部分跟前端無關，量任何東西都用得上。</p>
+<p><strong>1. 主指標之外要有護欄計數器。<strong>主指標告訴你快了多少，
+護欄計數器告訴你</strong>這個數字能不能拿來說話</strong>（第一篇第七節）。
+<code>layoutChecksum</code> 兩臂逐位元相同，證明治療沒偷工——順帶一則本篇才更正的錯：
+第一篇印的 checksum 值 54168 其實出自另一支 1x、四次點擊的校準探針，
+三份正典 JSON 的 18 筆實測全部是 <strong>54888</strong>（報告 03）。已發文章不回頭改（規矩 5），
+所以更正寫在這裡——護欄計數器連自己被引錯都有辦法被抓到，因為每個值都有出處可對；
+<code>rendersSkipped</code> 恆為 0，
+抓到一段從未執行的程式；<code>passes</code> 與 <code>rectReads</code> 逐輪相同，抓到兩臂做著同一件事。
+第一篇抓出那八段有問題的治療，靠的全部是這種計數器（第一篇第七節）。</p>
+<p>**2. 先量你自己的雜訊底線。**一段位元級相同的路徑跑六輪，掉幀全距 5 幀（第一篇第二節）——
+這就是本站的尺。小於底線的差距一律不宣稱；「治療臂 A 比治療臂 B 好 1 幀」在這裡不是句子。</p>
+<p><strong>3. 相對離散度在治療有效時會把方向搞反。</strong><code>(max−min)/median</code> 在 median 趨零時爆炸：
+掉幀 4/1/1 算出 300%,判不可重現——<strong>治療越成功，越判它不可重現</strong>（第一篇第六節）。
+判準需要一條絕對底線，不能只有相對值。</p>
+<p>**4. 可重現性判準抓不到穩定的錯。**它只看三輪之間一不一致，
+一個每輪都在的常數偏差，它給你全站最漂亮的離散度。
+要抓它，得有一條直接問「<strong>同一個 mode 量兩次，數字一樣嗎</strong>」的測試
+（<code>tools/b-class-isolation.mjs</code>，第二篇第九節）——而它本來應該從第一天就存在。</p>
+<p>**5. 解析度下限印在 UI 上，不放在心裡。**Event Timing 的 <code>durationThreshold</code> 最低 16ms、
+<code>duration</code> 四捨五入到 8ms、LoAF 的 <code>blockingDuration</code> 是整幀的——三條全部印在面板與文章裡
+（spec §1 誠實原則）。連「標本 #2 的 LCP 標的其實是『請不要動』那段操作說明、
+不是那 5000 列清單」這種會讓故事變醜的事實，也照實登記成凍結變因並寫進報告
+（phase2 檔尾追記、報告 02）。標明限制之後，就大方地下結論。</p>
+<hr>
+<h2 id="七怎麼讀這座館">七、怎麼讀這座館</h2>
+<ol>
+<li>**親手按。**站在 <a href="https://frontendmuseum.pages.dev">https://frontendmuseum.pages.dev</a> ——
+首頁是標本索引，量測台在 <code>/measure.html</code>。每個標本頁都能切病變／治療，面板即時顯示指標。
+量測功能需要 Chromium 系瀏覽器（<code>interactionId</code> 與 LoAF 都是 Chromium-only）。
+面板出現紅色 banner 表示在 dev server 上——那時的數字不算數。</li>
+<li>**兩篇文章按順序讀。**第一篇是第一輪的判決，第二篇是修完實驗設計之後的翻案紀錄。
+第二篇讓第一篇多處數字失效，而第一篇一個字不改——這個順序本身就是方法論。</li>
+<li><strong>六份病理報告</strong>（<code>docs/reports/01~06</code>）：每份八節，凍結條件、兇手歸因、
+治療梯度、誠實揭露，每個數字附欄位路徑。</li>
+<li><strong>原始資料</strong>（<code>docs/measurements/*.json</code>）：每篇文章頭三行都寫了它用哪一份，
+可以自行覆算。臂間比值只在同一份 JSON 內部成立。</li>
+<li><strong>登記檔</strong>（<code>docs/phase*-expected-results.md</code>）：預期、實測、修正紀錄、作廢清單。
+想看「登記完不准回頭改」實際上長什麼樣子，看檔尾那一串追記。</li>
+</ol>
+<hr>
+<h2 id="附錄這篇文章沒有做到的事">附錄：這篇文章沒有做到的事</h2>
+<ul>
+<li>**本文不產生新數字。**每個數字都應該能在標明的來源檔案裡逐字找到；找不到就是本文錯了。</li>
+<li>**全部數字是 CDP 機器驅動，不是人手。**標本 #1 的結論明確受此影響
+（人手約 150ms 一下，事件根本不排隊，那是另一個實驗）。人手複驗從第一篇欠到現在。</li>
+<li>**只跑三輪。**足以支撐「同一個結論重現三次」，不足以估計分佈。</li>
+<li>**單機、Chromium-only。**比值是機器速度的函數（第五節警語），
+本站的宣稱從來不含「你的機器上也會是這個數字」——只含「照這套方法量，你會得到你的」。</li>
+<li><strong>六個標本不是效能反模式的全集</strong>，也不打算是。六個做透勝過二十個做淺，
+是 spec 開頭就定的取捨。</li>
+<li><strong>部署本身也過了驗收才算數</strong>：上線當天把 13 條驗收原封不動對著生產站再跑一次
+（13/13，校準錨點 304ms ×3、離散 0.0%），另實抓零外部請求與注入檢查
+（四頁、含 404 頁，全綠）。託管平台的 SPA fallback 差點把「亂打的路徑回 200」
+端上桌，被部署驗收第一條抓掉 —— 詳見 <code>docs/HANDOFF.md</code> 部署一節。</li>
+</ul>
+
+<footer class="foot">
+  <p>已發出的文章不回頭改數字 —— 這是有日期、附原始資料連結的快照，
+  後續發現問題就寫下一篇，不是改上一篇。原始資料在
+  <a href="https://github.com/BardKidd/FrontendMuseum">GitHub repo</a> 的
+  <code>docs/measurements/</code>，可自行覆算。</p>
+  <p><a href="/">← 標本索引</a> <a href="/articles/">文章目錄</a> <a href="/reports/">病理報告</a> <a href="/measure.html">量測台 →</a></p>
+</footer>
+</div>
+</body>
+</html>

@@ -6,13 +6,14 @@
  * `vite.config.ts` 的 keepNames 三處一個都不用碰。
  *
  * 產出**要 commit**（public/reports/ 進版控）：報告改了跑一次
- * `npm run build:reports` 再 commit，跟量測資料一樣走「產物可審閱」路線。
+ * `npm run build:docs` 再 commit，跟量測資料一樣走「產物可審閱」路線。
  *
- * 設計沿用首頁定案系統（Almanac · anchor hue 28，tokens 見根目錄 tokens.css）。
- * 零外部請求（spec §4.7）：樣式全部內嵌、系統字體堆疊、無任何外連資源。
+ * CSS、報頭、章節目錄與文章共用 `tools/lib/doc-shell.mjs` —— 兩份各自維護的樣式
+ * 遲早會分岔，而分岔的症狀是「同一個站看起來像兩個站」。
  */
 import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { marked } from 'marked';
+import { shell, withToc, wrapTables } from './lib/doc-shell.mjs';
 
 const SRC = 'docs/reports';
 const OUT = 'public/reports';
@@ -20,131 +21,45 @@ mkdirSync(OUT, { recursive: true });
 
 const files = readdirSync(SRC).filter((f) => f.endsWith('.md')).sort();
 
-const CSS = `
-  :root {
-    --paper:   oklch(97%   0.008 80);
-    --paper2:  oklch(94.5% 0.011 78);
-    --rule:    oklch(84%   0.010 70);
-    --rule2:   oklch(90%   0.008 74);
-    --neutral: oklch(58%   0.009 60);
-    --muted:   oklch(43%   0.009 55);
-    --ink:     oklch(21%   0.011 45);
-    --accent:  oklch(45%   0.145 28);
-    --focus:   oklch(52%   0.170 28);
-    --serif: ui-serif, "Noto Serif CJK TC", "Noto Serif TC", Georgia, serif;
-    --sans:  ui-sans-serif, system-ui, "Noto Sans CJK TC", sans-serif;
-    --mono:  ui-monospace, "Noto Sans Mono CJK TC", Menlo, Consolas, monospace;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--paper); color: var(--ink);
-    font-family: var(--sans); line-height: 1.75; font-size: 1rem;
-    -webkit-text-size-adjust: 100%;
-  }
-  .page { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
-  .mast { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.05em;
-    color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem;
-    justify-content: space-between; }
-  .mast a { display: inline-flex; align-items: center; min-height: 44px;
-    color: var(--accent); white-space: nowrap; text-underline-offset: 0.2em; }
-  .mast a:hover { color: var(--focus); }
-  .rule  { border: 0; border-top: 3px solid var(--ink);  margin: 0.5rem 0 0; }
-  .rule2 { border: 0; border-top: 1px solid var(--rule); margin: 4px 0 2rem; }
-  h1 { font-family: var(--serif); font-size: 1.9rem; line-height: 1.3; margin: 0 0 1rem; }
-  h2 { font-family: var(--serif); font-size: 1.35rem; line-height: 1.35;
-    margin: 2.5rem 0 0.75rem; padding-top: 1rem; border-top: 1px solid var(--rule2); }
-  h3 { font-family: var(--serif); font-size: 1.1rem; margin: 2rem 0 0.5rem; }
-  h4 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
-  p { margin: 0.75rem 0; }
-  a { color: var(--accent); }
-  a:hover { color: var(--focus); }
-  blockquote { margin: 1rem 0; padding: 0.25rem 1rem;
-    border-left: 3px solid var(--accent); background: var(--paper2);
-    color: var(--muted); }
-  blockquote p { margin: 0.5rem 0; }
-  code { font-family: var(--mono); font-size: 0.875em;
-    background: var(--paper2); padding: 0.1em 0.35em; border-radius: 3px;
-    overflow-wrap: anywhere; }
-  pre { background: var(--paper2); border: 1px solid var(--rule2);
-    padding: 0.75rem 1rem; overflow-x: auto; line-height: 1.6; }
-  pre code { background: none; padding: 0; overflow-wrap: normal; }
-  h1, h2, h3, h4, p, li { overflow-wrap: anywhere; min-width: 0; }
-  .rlist { list-style: none; padding: 0; }
-  .rlist li { overflow-x: auto; margin: 0; }
-  .rlist a { display: inline-flex; align-items: center; min-height: 44px;
-    white-space: nowrap; }
-  .tw { overflow-x: auto; margin: 1rem 0; }
-  table { border-collapse: collapse; font-size: 0.9rem; min-width: 100%; }
-  th, td { text-align: left; padding: 0.45rem 0.75rem; vertical-align: top;
-    border-bottom: 1px solid var(--rule2); }
-  th { font-family: var(--mono); font-weight: 600; font-size: 0.8rem;
-    letter-spacing: 0.04em; color: var(--muted);
-    border-bottom: 2px solid var(--rule); white-space: nowrap; }
-  ul, ol { padding-left: 1.5rem; }
-  li { margin: 0.35rem 0; }
-  strong { font-weight: 650; }
-  .foot { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule);
-    font-family: var(--mono); font-size: 0.8rem; color: var(--neutral); }
-  .foot a { white-space: nowrap; display: inline-flex; min-height: 44px;
-    align-items: center; margin-right: 1.25rem; }
-`;
-
-const mastNav = `<nav class="mast" aria-label="站內">
-  <a href="/">← 標本索引</a>
-  <a href="/reports/">病理報告目錄</a>
-  <a href="/measure.html">量測台 →</a>
-</nav>
-<hr class="rule"><hr class="rule2">`;
-
 const foot = `<footer class="foot">
   <p>每個數字在文中都附了 JSON 欄位路徑或登記檔行號 ——
   原始資料在 <a href="https://github.com/BardKidd/FrontendMuseum">GitHub repo</a> 的
   <code>docs/measurements/</code>，可自行覆算。臂間比值只在同一份 JSON 內部成立。</p>
-  <p><a href="/">← 標本索引</a> <a href="/reports/">報告目錄</a> <a href="/measure.html">量測台 →</a></p>
+  <p><a href="/">← 標本索引</a> <a href="/reports/">報告目錄</a> <a href="/articles/">文章</a> <a href="/measure.html">量測台 →</a></p>
 </footer>`;
-
-function shell(title, body) {
-  return `<!doctype html>
-<html lang="zh-Hant">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="data:,">
-<title>${title} · 前端效能病理標本館</title>
-<style>${CSS}</style>
-</head>
-<body>
-<div class="page">
-${mastNav}
-${body}
-${foot}
-</div>
-</body>
-</html>
-`;
-}
 
 const index = [];
 for (const f of files) {
   const md = readFileSync(`${SRC}/${f}`, 'utf8');
   const m = md.match(/^#\s+(.+)$/m);
   const title = (m ? m[1] : f).replace(/^病理報告\s*·\s*/, '');
+  // 索引頁的一句話說明取標本抬頭（md 的第一個 `## `），不另外手寫一份會走鐘的副本
+  const sub = md.match(/^##\s+(.+)$/m);
   let html = marked.parse(md, { gfm: true });
-  // 表格包一層可捲容器 —— 手機門檻：寬內容自己捲，頁面不准橫向捲
-  html = html.replaceAll('<table>', '<div class="tw"><table>').replaceAll('</table>', '</table></div>');
+  html = wrapTables(html);
+  html = withToc(html);
   const out = f.replace(/\.md$/, '.html');
-  writeFileSync(`${OUT}/${out}`, shell(title, html));
-  index.push({ out, title });
+  writeFileSync(`${OUT}/${out}`, shell({ title, body: html, here: 'reports', foot }));
+  index.push({ out, title, sub: sub ? sub[1] : '' });
   console.log(`${SRC}/${f} → ${OUT}/${out}`);
 }
 
-writeFileSync(`${OUT}/index.html`, shell('病理報告目錄', `
+writeFileSync(
+  `${OUT}/index.html`,
+  shell({
+    title: '病理報告目錄',
+    here: 'reports',
+    foot,
+    body: `
 <h1>病理報告 · 目錄</h1>
-<p>每個標本一份，八節固定：凍結條件、動工前登記的預期、實測、兇手歸因、
+<p>每個標本一份，固定七節：凍結條件、動工前登記的預期、實測、兇手歸因、
 治療梯度、與登記的差異、誠實揭露。<strong>每個數字都附出處</strong>。</p>
 <ul class="rlist">
-${index.map((r) => `  <li><a href="/reports/${r.out}">${r.title}</a></li>`).join('\n')}
+${index.map((r) => `  <li><a href="/reports/${r.out}">${r.title}</a><p>${r.sub}</p></li>`).join('\n')}
 </ul>
-<p>讀法建議：先看「病症一句話」與「誠實揭露」，再決定要不要信中間那幾節。</p>
-`));
+<p>讀法建議：先看「病症一句話」與「誠實揭露」，再決定要不要信中間那幾節。
+每份報告頁首都有章節目錄，可以直接跳過去 —— 一份報告一萬多像素高，不必從頭捲。</p>
+`,
+  }),
+);
 console.log(`${OUT}/index.html（${index.length} 份）`);

@@ -8,6 +8,17 @@ const CHROME = '/usr/bin/brave-browser';
 const PORT = 9334;
 // 2026-07-26：外殼從 `/` 搬到 `/measure.html`（`/` 現在是首頁／標本索引）
 const URL_SHELL = 'http://localhost:4173/measure.html';
+/**
+ * 開場一律走 `?specimen=00-calibration` 的深連結，**不靠外殼的預設標本**。
+ *
+ * 2026-07-28：外殼的預設從 `SPECIMENS[0]`（校準件）改成標本 #1 —— 校準件不是六個標本
+ * 之一，讓訪客落在它上面是 IA 錯誤。這三支工具當時全部假設「開 measure.html 就會是校準件」，
+ * 於是一改就整批掛在「specimen never mounted」。
+ *
+ * 那個假設從來不是契約，是舊預設值的巧合。工具該明講自己要量什麼 ——
+ * 深連結參數本來就存在（App.tsx 的 initialFromUrl），這裡只是開始用它。
+ */
+const URL_SHELL_CAL = `${URL_SHELL}?specimen=00-calibration`;
 const PROFILE = '/tmp/perf-museum-acceptance-profile';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -140,7 +151,7 @@ const snap = () => evaluate(`(() => {
 const panelText = () => evaluate(`(document.querySelector('.rep') || document.body).innerText`);
 
 // ── 開場 ──────────────────────────────────────────────────────────────
-await S('Page.navigate', { url: URL_SHELL });
+await S('Page.navigate', { url: URL_SHELL_CAL });
 let ready = false;
 for (let i = 0; i < 80 && !ready; i++) {
   await sleep(250);

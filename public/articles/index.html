@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:,">
-<title>病理報告目錄 · 前端效能病理標本館</title>
+<title>文章目錄 · 前端效能病理標本館</title>
 <style>
   :root {
     --paper:   oklch(97%   0.008 80);
@@ -117,31 +117,30 @@
 <div class="page">
 <nav class="mast" aria-label="站內">
   <a href="/">← 標本索引</a>
-  <a href="/reports/" aria-current="page">病理報告</a>
-  <a href="/articles/">文章</a>
+  <a href="/reports/">病理報告</a>
+  <a href="/articles/" aria-current="page">文章</a>
   <a href="/measure.html">量測台 →</a>
 </nav>
 <hr class="rule"><hr class="rule2">
 
-<h1>病理報告 · 目錄</h1>
-<p>每個標本一份，固定七節：凍結條件、動工前登記的預期、實測、兇手歸因、
-治療梯度、與登記的差異、誠實揭露。<strong>每個數字都附出處</strong>。</p>
+<h1>文章 · 目錄</h1>
+<p>報告是逐個標本的檢驗紀錄，文章是把它們讀成一句結論的地方。
+三篇都附原始資料檔名，每個比值都能覆算。<strong>已發出的不回頭改數字</strong> ——
+後來翻案的部分寫在下一篇，前一篇原地保留。</p>
 <ul class="rlist">
-  <li><a href="/reports/01-main-thread-block.html">標本 #1</a><p>01 主執行緒阻塞（Main-thread Block）</p></li>
-  <li><a href="/reports/02-long-list.html">02 長列表未虛擬化</a><p>02 長列表未虛擬化</p></li>
-  <li><a href="/reports/03-layout-thrashing.html">03 強制同步版面重排（Layout Thrashing）</a><p>03 強制同步版面重排（Layout Thrashing）</p></li>
-  <li><a href="/reports/04-unthrottled-events.html">04 事件處理未節流</a><p>04 事件處理未節流（Unthrottled Event Handlers）</p></li>
-  <li><a href="/reports/05-layout-shift.html">標本 05</a><p>05 版面位移（Layout Shift / CLS）</p></li>
-  <li><a href="/reports/06-rerender-storm.html">標本 #6</a><p>06 高頻資料流造成的 re-render 風暴</p></li>
+  <li><a href="/articles/01-twelve-treatments-four-survive.html">十二段治療處方，站得住的有四段</a><p>前端效能病理標本館 · 第一篇</p></li>
+  <li><a href="/articles/02-eight-verdicts-six-overturned.html">修掉實驗設計再量一次，八格判決翻了六格</a><p>前端效能病理標本館 · 第二篇</p></li>
+  <li><a href="/articles/03-why-this-museum.html">為什麼蓋一座標本館，而不是再寫一篇效能技巧文</a><p>前端效能病理標本館 · 第三篇 · 入口總覽</p></li>
 </ul>
-<p>讀法建議：先看「病症一句話」與「誠實揭露」，再決定要不要信中間那幾節。
-每份報告頁首都有章節目錄，可以直接跳過去 —— 一份報告一萬多像素高，不必從頭捲。</p>
+<p>沒讀過這個站的話從第三篇開始 —— 它是入口總覽，不產生新數字，
+把另外兩篇與六份報告串成一條線。</p>
 
 <footer class="foot">
-  <p>每個數字在文中都附了 JSON 欄位路徑或登記檔行號 ——
-  原始資料在 <a href="https://github.com/BardKidd/FrontendMuseum">GitHub repo</a> 的
-  <code>docs/measurements/</code>，可自行覆算。臂間比值只在同一份 JSON 內部成立。</p>
-  <p><a href="/">← 標本索引</a> <a href="/reports/">報告目錄</a> <a href="/articles/">文章</a> <a href="/measure.html">量測台 →</a></p>
+  <p>已發出的文章不回頭改數字 —— 這是有日期、附原始資料連結的快照，
+  後續發現問題就寫下一篇，不是改上一篇。原始資料在
+  <a href="https://github.com/BardKidd/FrontendMuseum">GitHub repo</a> 的
+  <code>docs/measurements/</code>，可自行覆算。</p>
+  <p><a href="/">← 標本索引</a> <a href="/articles/">文章目錄</a> <a href="/reports/">病理報告</a> <a href="/measure.html">量測台 →</a></p>
 </footer>
 </div>
 </body>

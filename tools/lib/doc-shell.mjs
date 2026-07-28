@@ -1,11 +1,14 @@
-<!doctype html>
-<html lang="zh-Hant">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="data:,">
-<title>病理報告目錄 · 前端效能病理標本館</title>
-<style>
+/**
+ * 報告與文章共用的文件外殼 —— CSS、報頭、頁尾、章節目錄。
+ *
+ * 抽出來的理由不是 DRY，是**一致性有強制力**：`/reports/` 與 `/articles/` 是同一座館的
+ * 兩種長文件，兩份各自維護的 CSS 遲早會分岔，而分岔的症狀是「同一個站看起來像兩個站」。
+ *
+ * 設計沿用首頁定案系統（Almanac · anchor hue 28，tokens 見根目錄 `tokens.css`）。
+ * 零外部請求（spec §4.7）：樣式全部內嵌、系統字體堆疊、無任何外連資源。
+ */
+
+export const CSS = `
   :root {
     --paper:   oklch(97%   0.008 80);
     --paper2:  oklch(94.5% 0.011 78);
@@ -111,38 +114,137 @@
     font-family: var(--mono); font-size: 0.8rem; color: var(--neutral); }
   .foot a { white-space: nowrap; display: inline-flex; min-height: 44px;
     align-items: center; margin-right: 1.25rem; }
-</style>
+`;
+
+/**
+ * 給每個 h2 掛 id，並回傳目錄項。
+ *
+ * 走字串後處理而不是 marked 的 renderer 覆寫：renderer.heading 的簽章在 marked 各大版本
+ * 之間換過三次（字串 → token → this.parser），而這裡只需要「補一個屬性、順便抄下文字」。
+ * 少一個會隨相依版本靜默改變行為的接點。
+ *
+ * slug 保留中日韓字元 —— 分享出去的網址會被 percent-encode，但可讀性歸讀者的網址列所有，
+ * 而 `#凍結條件` 比 `#sec-1` 更能看出自己被帶到哪一節。撞名或整串被清空時才退回 sec-N。
+ */
+/**
+ * 目錄那一行的寬度預算，以「全形字」為單位。
+ *
+ * 是量出來的，不是估的：320px 視窗扣掉 `.page` 左右各 20px 內距 = 280px，
+ * 再扣掉編號前綴約 20px，剩約 260px；標籤字級 1rem = 16px，260 / 16 ≈ 16 個全形字。
+ * 取 15 留一格餘裕。
+ */
+const TOC_LABEL_BUDGET = 15;
+
+/** 全形算 1、其餘算 0.55。純粹用來決定「這一行放不放得下」，不是精確排版 */
+function visualWidth(s) {
+  let w = 0;
+  for (const ch of s) w += /[　-鿿＀-￯]/.test(ch) ? 1 : 0.55;
+  return w;
+}
+
+/**
+ * 目錄標籤。**標題本身永遠保留全稱**，砍的只有目錄那一行。
+ *
+ * 為什麼需要砍：`.toc a` 是 nowrap（可點擊文字不准斷成兩行）。報告的節名是四到六個字，
+ * 怎麼排都沒事；文章的 h2 是整句 —— 實測「二、雜訊底噪不是猜的——一段從未執行的
+ * 程式碼替我量了它」在目錄裡寬 444px，容器 280px，於是**整個頁面橫向捲了 144px**。
+ * 那是四道 gate 裡最嚴重的一條，而且只在文章上站之後才會出現。
+ *
+ * 三段式，越前面越無損：
+ *   1. 砍句尾括號註（標本抬頭的「（Main-thread Block）」）
+ *   2. 放不下就取子句頭（在 ——／：／，之前斷）—— 目錄標籤本來就該比標題短，
+ *      而這些標點正好是中文的子句界，切出來的一定是標題的真前綴
+ *   3. 還是放不下才硬切加刪節號
+ */
+function tocLabel(text) {
+  const base = text.replace(/\s*[（(][^（()）]*[)）]\s*$/, '');
+  if (visualWidth(base) <= TOC_LABEL_BUDGET) return base;
+
+  const head = base.split(/——|[：:，]/)[0].trim();
+  if (head.length > 0 && head !== base && visualWidth(head) <= TOC_LABEL_BUDGET) return head;
+
+  let out = '';
+  for (const ch of head.length > 0 ? head : base) {
+    if (visualWidth(out + ch) > TOC_LABEL_BUDGET - 1) break;
+    out += ch;
+  }
+  return `${out}…`;
+}
+
+export function withHeadingIds(html) {
+  const toc = [];
+  const used = new Set();
+  const out = html.replace(/<h2([^>]*)>([\s\S]*?)<\/h2>/g, (_m, attrs, inner) => {
+    const text = inner.replace(/<[^>]+>/g, '').trim();
+    let slug = text.replace(/[\s　]+/g, '-').replace(/[^\p{Letter}\p{Number}-]/gu, '');
+    if (slug.length === 0 || used.has(slug)) slug = `sec-${toc.length + 1}`;
+    used.add(slug);
+    toc.push({ slug, text: tocLabel(text) });
+    return `<h2 id="${slug}"${attrs}>${inner}</h2>`;
+  });
+  return { html: out, toc };
+}
+
+/** 目錄插在 h1 之後、第一個 h2 之前。長文件一萬多像素高，這是唯一的跳節手段 */
+export function withToc(html) {
+  const { html: withIds, toc } = withHeadingIds(html);
+  if (toc.length === 0) return withIds;
+  const nav = `<nav class="toc" aria-label="本頁章節">
+  <b>本頁章節</b>
+  <ol>
+${toc.map((t) => `    <li><a href="#${t.slug}">${t.text}</a></li>`).join('\n')}
+  </ol>
+</nav>`;
+  const at = withIds.indexOf('</h1>');
+  return at < 0 ? nav + withIds : withIds.slice(0, at + 5) + '\n' + nav + withIds.slice(at + 5);
+}
+
+/** 表格包一層可捲容器 —— 手機門檻：寬內容自己捲，頁面不准橫向捲 */
+export function wrapTables(html) {
+  return html.replaceAll('<table>', '<div class="tw"><table>').replaceAll('</table>', '</table></div>');
+}
+
+/**
+ * 站內報頭。四個入口，每一頁都一樣 —— 導覽位置不准依頁型改變。
+ * `here` 是目前所在區塊的 key；對應那一項掛 aria-current="page"。
+ */
+export function mastNav(here) {
+  const items = [
+    { href: '/', label: '← 標本索引', key: 'index' },
+    { href: '/reports/', label: '病理報告', key: 'reports' },
+    { href: '/articles/', label: '文章', key: 'articles' },
+    { href: '/measure.html', label: '量測台 →', key: 'measure' },
+  ];
+  const links = items
+    .map((i) =>
+      i.key === here
+        ? `  <a href="${i.href}" aria-current="page">${i.label}</a>`
+        : `  <a href="${i.href}">${i.label}</a>`,
+    )
+    .join('\n');
+  return `<nav class="mast" aria-label="站內">
+${links}
+</nav>
+<hr class="rule"><hr class="rule2">`;
+}
+
+export function shell({ title, body, here, foot }) {
+  return `<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>${title} · 前端效能病理標本館</title>
+<style>${CSS}</style>
 </head>
 <body>
 <div class="page">
-<nav class="mast" aria-label="站內">
-  <a href="/">← 標本索引</a>
-  <a href="/reports/" aria-current="page">病理報告</a>
-  <a href="/articles/">文章</a>
-  <a href="/measure.html">量測台 →</a>
-</nav>
-<hr class="rule"><hr class="rule2">
-
-<h1>病理報告 · 目錄</h1>
-<p>每個標本一份，固定七節：凍結條件、動工前登記的預期、實測、兇手歸因、
-治療梯度、與登記的差異、誠實揭露。<strong>每個數字都附出處</strong>。</p>
-<ul class="rlist">
-  <li><a href="/reports/01-main-thread-block.html">標本 #1</a><p>01 主執行緒阻塞（Main-thread Block）</p></li>
-  <li><a href="/reports/02-long-list.html">02 長列表未虛擬化</a><p>02 長列表未虛擬化</p></li>
-  <li><a href="/reports/03-layout-thrashing.html">03 強制同步版面重排（Layout Thrashing）</a><p>03 強制同步版面重排（Layout Thrashing）</p></li>
-  <li><a href="/reports/04-unthrottled-events.html">04 事件處理未節流</a><p>04 事件處理未節流（Unthrottled Event Handlers）</p></li>
-  <li><a href="/reports/05-layout-shift.html">標本 05</a><p>05 版面位移（Layout Shift / CLS）</p></li>
-  <li><a href="/reports/06-rerender-storm.html">標本 #6</a><p>06 高頻資料流造成的 re-render 風暴</p></li>
-</ul>
-<p>讀法建議：先看「病症一句話」與「誠實揭露」，再決定要不要信中間那幾節。
-每份報告頁首都有章節目錄，可以直接跳過去 —— 一份報告一萬多像素高，不必從頭捲。</p>
-
-<footer class="foot">
-  <p>每個數字在文中都附了 JSON 欄位路徑或登記檔行號 ——
-  原始資料在 <a href="https://github.com/BardKidd/FrontendMuseum">GitHub repo</a> 的
-  <code>docs/measurements/</code>，可自行覆算。臂間比值只在同一份 JSON 內部成立。</p>
-  <p><a href="/">← 標本索引</a> <a href="/reports/">報告目錄</a> <a href="/articles/">文章</a> <a href="/measure.html">量測台 →</a></p>
-</footer>
+${mastNav(here)}
+${body}
+${foot}
 </div>
 </body>
 </html>
+`;
+}
